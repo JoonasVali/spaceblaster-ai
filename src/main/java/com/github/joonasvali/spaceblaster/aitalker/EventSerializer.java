@@ -1,6 +1,7 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.event.Event;
+import com.github.joonasvali.spaceblaster.event.EventType;
 import com.github.joonasvali.spaceblaster.event.MovingDirection;
 
 public class EventSerializer {
@@ -169,6 +170,13 @@ public class EventSerializer {
     }
     strb.append("Is game in between two rounds, waiting for next round to happen: ").append(event.inBetweenRounds).append(".");
     strb.append("\n");
+
+    if (event.type == EventType.LOAD_LEVEL) {
+      strb.append("Player is playing episode: ").append(event.episodeName).append(".");
+      strb.append("\n");
+      strb.append("Incoming level name: ").append(event.levelName).append(".");
+      strb.append("\n");
+    }
 
     return strb.toString();
   }
