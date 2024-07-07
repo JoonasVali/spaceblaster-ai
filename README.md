@@ -50,6 +50,11 @@ Note that generally the flow should be:
 3) Run the script
 4) Combine the audio track with the video track.
 
+### Example runs:
+
+https://www.youtube.com/watch?v=aLvp6on_FHs (Narrated by Fin)
+https://www.youtube.com/watch?v=4tj6QLNC0uU (Short run, narrated by Liam)
+https://www.youtube.com/watch?v=Xq0JhjDl6ps (Short run, narrated by Mimi)
 
 ### IMPORTANT
 
