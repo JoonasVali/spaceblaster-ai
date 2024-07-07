@@ -52,7 +52,8 @@ Note that generally the flow should be:
 
 ### Example runs:
 
-* [Longer game, Narrated by Fin](https://www.youtube.com/watch?v=aLvp6on_FHs) 
+* [Longer game, Narrated by Fin 1](https://www.youtube.com/watch?v=19sxnWyOv_M) 
+* [Longer game, Narrated by Fin 2](https://www.youtube.com/watch?v=aLvp6on_FHs) 
 * [Short run, narrated by Liam](https://www.youtube.com/watch?v=4tj6QLNC0uU) 
 * [Short run, narrated by Mimi](https://www.youtube.com/watch?v=Xq0JhjDl6ps) 
 
