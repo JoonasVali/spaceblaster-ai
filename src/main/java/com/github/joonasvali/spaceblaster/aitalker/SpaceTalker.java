@@ -233,7 +233,8 @@ public class SpaceTalker {
     public Long addSoundConditionally(String text, Long speechStartTime, long limitDuration, long periodDuration) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
-      long duration = textToSpeechClient.produce(text, outputFile);
+      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, outputFile);
+      long duration = response.durationMs();
       if (duration <= limitDuration) {
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
             // Avoid creating a wait time if limitDuration has been artificially increased to a larger window,
@@ -251,7 +252,8 @@ public class SpaceTalker {
     public AddSoundResult addSound(String text, Long speechStartTime, long limitDuration, long periodDuration) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
-      long duration = textToSpeechClient.produce(text, outputFile);
+      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, outputFile);
+      long duration = response.durationMs();
       // Avoid creating a wait time if limitDuration has been artificially increased to a larger window,
       // but duration is smaller than that window.
       long cutoff = periodDuration < limitDuration ? Math.max(duration, periodDuration) : limitDuration;
