@@ -58,7 +58,7 @@ public class ElevenLabsClient implements TextToSpeechClient {
    *
    */
   @Override
-  public TextToSpeechResponse produce(String text, Path outputFile) throws IOException {
+  public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
     String voiceId = voiceSettings.getVoiceId();
 
     String requestId;
@@ -92,6 +92,10 @@ public class ElevenLabsClient implements TextToSpeechClient {
         })
         .setModel(ElevenLabsVoiceModel.ELEVEN_MONOLINGUAL_V1)
         .setLatencyOptimization(StreamLatencyOptimization.NONE);
+
+    if (previousRequestIds.length > 0) {
+      builder.setPreviousRequestIds(previousRequestIds);
+    }
 
     Path path = Paths.get(builder.build().getCanonicalPath());
     requestId = builder.getReceivedLastRequestId();

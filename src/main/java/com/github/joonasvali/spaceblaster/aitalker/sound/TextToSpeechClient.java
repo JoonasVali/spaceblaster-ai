@@ -9,7 +9,7 @@ public interface TextToSpeechClient {
   String getCommentatorDescription();
   TextToSpeechOutput getOutputSettings();
 
-  TextToSpeechResponse produce(String text, Path outputFile) throws IOException;
+  TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException;
 
   SoundDurationEvaluator getSoundDurationEvaluator();
 

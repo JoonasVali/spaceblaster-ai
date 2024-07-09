@@ -223,6 +223,7 @@ public class SpaceTalker {
     private final Path soundOutputDir;
     private int index;
     private final long startTime;
+    private final List<String> requestIds = new ArrayList<>();
 
     public VoiceCommentaryRepository(Long startTime, String folderName) throws IOException {
       soundOutputDir = outputRootDirectory.resolve(folderName);
@@ -230,10 +231,16 @@ public class SpaceTalker {
       Files.createDirectories(soundOutputDir);
     }
 
+    private void trimRequestIds() {
+      while (requestIds.size() > 2) {
+        requestIds.removeFirst();
+      }
+    }
+
     public Long addSoundConditionally(String text, Long speechStartTime, long limitDuration, long periodDuration) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
-      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, outputFile);
+      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
       if (duration <= limitDuration) {
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
@@ -242,6 +249,8 @@ public class SpaceTalker {
             periodDuration < limitDuration ? Math.max(duration, periodDuration) : limitDuration,
             outputFile
         );
+        requestIds.add(response.requestId());
+        trimRequestIds();
         index++;
       } else {
         Files.delete(outputFile);
@@ -252,7 +261,7 @@ public class SpaceTalker {
     public AddSoundResult addSound(String text, Long speechStartTime, long limitDuration, long periodDuration) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
-      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, outputFile);
+      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
       // Avoid creating a wait time if limitDuration has been artificially increased to a larger window,
       // but duration is smaller than that window.
@@ -261,6 +270,8 @@ public class SpaceTalker {
           cutoff,
           outputFile);
       index++;
+      requestIds.add(response.requestId());
+      trimRequestIds();
 
       return new AddSoundResult(duration, Math.min(cutoff, duration));
     }

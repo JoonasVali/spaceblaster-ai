@@ -370,7 +370,7 @@ public class SpaceTalkerTest {
     }
 
     @Override
-    public TextToSpeechResponse produce(String text, Path outputFile) throws IOException {
+    public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
       if (answers.isEmpty()) {
         throw new RuntimeException("No more answers");
       }
