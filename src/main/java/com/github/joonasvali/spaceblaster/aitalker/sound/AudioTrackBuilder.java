@@ -34,6 +34,13 @@ public class AudioTrackBuilder {
     voices.add(new TimedVoice(text, startTime, voiceDuration, voiceCutOffMs, soundFile));
   }
 
+  public long getLastVoiceEndTime() {
+    if (voices.size() == 0) {
+      return 0;
+    }
+    return voices.getLast().startTime + Math.min(voices.getLast().voiceDuration, voices.getLast().voiceCutoffMs);
+  }
+
   public List<TimedVoice> produce(Path outputFile) throws IOException {
     WavAppender appender = new WavAppender(outputFile, sampleRate);
     for (TimedVoice voice : voices.stream().sorted(Comparator.comparingLong(a -> a.startTime)).toList()) {
