@@ -85,13 +85,6 @@ public class SpaceTalker {
       Period lastPeriod = period;
       List<Event> secondaryEventsFromLastPeriod = lastPeriod.getSecondaryEvents();
       period = periods.get(i);
-
-      long eventRelativeTimestamp = period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp;
-      long extraTime = Math.max(0, eventRelativeTimestamp - audioTrackBuilder.getLastVoiceEndTime());
-      if (extraTime > 1000) {
-
-      }
-
       long latencyReduction = 0;
       if (latency > LATENCY_THRESHOLD_MS && period.getDuration() > MEDIUM_PERIOD_THRESHOLD_MS) {
         // replace period with time debt adjusted one to reduce latency.
