@@ -6,6 +6,7 @@ import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechOutput;
 import net.andrewcpu.elevenlabs.ElevenLabs;
 import net.andrewcpu.elevenlabs.builders.SpeechGenerationBuilder;
+import net.andrewcpu.elevenlabs.builders.impl.tts.TextToSpeechFileBuilder;
 import net.andrewcpu.elevenlabs.enums.ElevenLabsVoiceModel;
 import net.andrewcpu.elevenlabs.enums.GeneratedAudioOutputFormat;
 import net.andrewcpu.elevenlabs.enums.StreamLatencyOptimization;
@@ -57,10 +58,12 @@ public class ElevenLabsClient implements TextToSpeechClient {
    *
    */
   @Override
-  public long produce(String text, Path outputFile) throws IOException {
+  public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
     String voiceId = voiceSettings.getVoiceId();
 
-    Path path = Paths.get(SpeechGenerationBuilder.textToSpeech()
+    String requestId;
+
+    TextToSpeechFileBuilder builder = SpeechGenerationBuilder.textToSpeech()
         .file()
         .setText(text)
         .setGeneratedAudioOutputFormat(generatedAudioOutputFormat)
@@ -88,11 +91,17 @@ public class ElevenLabsClient implements TextToSpeechClient {
           }
         })
         .setModel(ElevenLabsVoiceModel.ELEVEN_MONOLINGUAL_V1)
-        .setLatencyOptimization(StreamLatencyOptimization.NONE)
-        .build().getCanonicalPath());
+        .setLatencyOptimization(StreamLatencyOptimization.NONE);
+
+    if (previousRequestIds.length > 0) {
+      builder.setPreviousRequestIds(previousRequestIds);
+    }
+
+    Path path = Paths.get(builder.build().getCanonicalPath());
+    requestId = builder.getReceivedLastRequestId();
 
     textToSpeechOutput.convertResultingFileToWav(path, outputFile);
-    return textToSpeechOutput.getDurationInMs(path);
+    return new TextToSpeechResponse(textToSpeechOutput.getDurationInMs(path), requestId);
   }
 
   @Override

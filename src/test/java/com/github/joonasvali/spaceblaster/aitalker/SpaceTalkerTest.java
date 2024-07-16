@@ -28,6 +28,7 @@ import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class SpaceTalkerTest {
   @TempDir
@@ -369,14 +370,14 @@ public class SpaceTalkerTest {
     }
 
     @Override
-    public long produce(String text, Path outputFile) throws IOException {
+    public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
       if (answers.isEmpty()) {
         throw new RuntimeException("No more answers");
       }
       Entry e = answers.getFirst();
       AudioInputStream stream = SilentWav.createSilentStream(e.nextDurationMs);
       AudioSystem.write(stream, AudioFileFormat.Type.WAVE, outputFile.toFile());
-      return e.nextDurationMs;
+      return new TextToSpeechResponse(e.nextDurationMs, UUID.randomUUID().toString());
     }
 
     @Override

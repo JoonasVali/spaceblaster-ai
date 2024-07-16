@@ -9,9 +9,12 @@ public interface TextToSpeechClient {
   String getCommentatorDescription();
   TextToSpeechOutput getOutputSettings();
 
-  long produce(String text, Path outputFile) throws IOException;
+  TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException;
 
   SoundDurationEvaluator getSoundDurationEvaluator();
 
   SpaceTalkListener getSpaceTalkListener();
+
+  record TextToSpeechResponse(long durationMs, String requestId) {
+  }
 }

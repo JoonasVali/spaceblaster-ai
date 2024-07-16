@@ -25,7 +25,7 @@ https://github.com/JoonasVali/SpaceBlaster
 ## Requirements
 
 * Java 21+
-* Maven 3.3+
+* Maven 3.9+
 * OpenAI token (paid subscription)
 * ElevenLabs API key (some free usage possible, but generally paid subscription is required)
 
@@ -33,11 +33,12 @@ https://github.com/JoonasVali/SpaceBlaster
 
 1) Save OpenAI token as `OPENAI_TOKEN` environment variable.
 2) Save ElevenLabs api key as `ELEVENLABS_API_KEY` environment variable.
-3) Clone the [SpaceBlaster repository](https://github.com/JoonasVali/SpaceBlaster) and `mvn clean install` it to get the spaceblaster `event` library. 
-4) Clone the SpaceBlaster-ai repository 
-5) In `Launch` class change the constants `EVENT_DATA_PATH` and `SOUND_OUTPUT_DIRECTORY_ROOT` to point to the generated 
+3) Clone the [SpaceBlaster repository](https://github.com/JoonasVali/SpaceBlaster) and `mvn clean install` it to get the spaceblaster `event` library.
+4) You also need to `mvn install` the customization of [elevenlabs-api](https://github.com/JoonasVali/elevenlabs-api)
+5) Clone the SpaceBlaster-ai repository 
+6) In `Launch` class change the constants `EVENT_DATA_PATH` and `SOUND_OUTPUT_DIRECTORY_ROOT` to point to the generated 
 event data file and to a directory which serves as a workspace for the output of this project.
-6) Run the main class `Launch` to generate the audio file. It's a long process to avoid rate limiting.
+7) Run the main class `Launch` to generate the audio file. It's a long process to avoid rate limiting.
 Adjust or remove the sleeps in case your accounts have higher rate limits.
 
 ### Activating the event system in SpaceBlaster
