@@ -35,7 +35,7 @@ public class Period {
     return zonedDateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
   }
 
-  public Long getDuration() {
+  public Long getIntendedDuration() {
     return Math.max(EventDigester.MIN_PERIOD, duration);
   }
 

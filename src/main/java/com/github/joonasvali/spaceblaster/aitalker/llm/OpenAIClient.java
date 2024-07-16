@@ -53,6 +53,11 @@ public class OpenAIClient extends BaseLLMClient {
       }
 
       @Override
+      public void onIntermediaryCommentaryCompleted(String result, int periodIndex, long timeSinceEventMs) {
+        // Nothing
+      }
+
+      @Override
       public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
         // Nothing
       }

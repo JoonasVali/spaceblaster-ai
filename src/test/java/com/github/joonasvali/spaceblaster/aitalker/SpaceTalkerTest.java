@@ -61,6 +61,11 @@ public class SpaceTalkerTest {
       }
 
       @Override
+      public void onIntermediaryCommentaryCompleted(String result, int periodIndex, long timeSinceEventMs) {
+        speech.nextAnswer();
+      }
+
+      @Override
       public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
 
       }
@@ -114,7 +119,9 @@ public class SpaceTalkerTest {
 
     List<String> llmAnswers = new ArrayList<>();
     llmAnswers.add("Welcome to the game.");
+    llmAnswers.add("Extra time 1.");
     llmAnswers.add("Game starts.");
+    llmAnswers.add("Extra time 2.");
     llmAnswers.add("Player dies.");
     llmAnswers.add("Player born.");
     llmAnswers.add("Player no longer invincible.");
@@ -126,7 +133,9 @@ public class SpaceTalkerTest {
 
     List<TestTextToSpeechClient.Entry> ttsAnswers = List.of(
         new TestTextToSpeechClient.Entry(21865, 21865),
+        new TestTextToSpeechClient.Entry(2000, 2000),
         new TestTextToSpeechClient.Entry(2926, 2926),
+        new TestTextToSpeechClient.Entry(1000, 1000),
         new TestTextToSpeechClient.Entry(1150, 1150),
         new TestTextToSpeechClient.Entry(2587, 2587),
         new TestTextToSpeechClient.Entry(1489, 1489),
@@ -155,8 +164,9 @@ public class SpaceTalkerTest {
   @Test
   public void testSpaceTalk2() throws IOException {
     final int fails = 4;
+    final int intermediary = 1;
     List<String> llmAnswers = new ArrayList<>();
-    for (int i = 0; i < 49 + fails; i++) {
+    for (int i = 0; i < 49 + fails + intermediary; i++) {
       llmAnswers.add("LLM answer " + i);
     }
 
@@ -175,6 +185,11 @@ public class SpaceTalkerTest {
 
         new TestTextToSpeechClient.Entry(2273, 2273),
         new TestTextToSpeechClient.Entry(2168, 2168),
+
+        // Intermediary period of 4
+        new TestTextToSpeechClient.Entry(1000, 1000),
+        // End of Intermediary period of 4
+
         new TestTextToSpeechClient.Entry(3129, 3129),
         new TestTextToSpeechClient.Entry(2735, 2735),
         new TestTextToSpeechClient.Entry(1384, 1384),

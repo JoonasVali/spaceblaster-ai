@@ -76,6 +76,11 @@ public class Launch {
       }
 
       @Override
+      public void onIntermediaryCommentaryCompleted(String result, int periodIndex, long timeSinceEventMs) {
+        logger.info("Intermediary commentary completed: " + result);
+      }
+
+      @Override
       public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
         logger.info("Trying resolutely force a shorter message. (" + attempt + ")");
       }
