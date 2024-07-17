@@ -9,6 +9,8 @@ import io.github.stefanbratanov.jvm.openai.CreateChatCompletionRequest;
 import io.github.stefanbratanov.jvm.openai.OpenAI;
 import io.github.stefanbratanov.jvm.openai.OpenAIException;
 import io.github.stefanbratanov.jvm.openai.OpenAIModel;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -16,6 +18,8 @@ import java.util.Collection;
 import java.util.List;
 
 public class OpenAIClient extends BaseLLMClient {
+
+  private final Logger logger = LoggerFactory.getLogger(OpenAIClient.class);
 
   public static final OpenAIModel OPEN_AI_MODEL = OpenAIModel.GPT_4o;
   public static final long SLEEP_ON_EXCEPTION_MS = 30000L;
@@ -73,6 +77,8 @@ public class OpenAIClient extends BaseLLMClient {
 
     ChatClient chatClient = openAI.chatClient();
     ChatMessage inputMessage = ChatMessage.userMessage(instruction.toString());
+    logger.info("Running OpenAI with instruction: " + instruction);
+    logger.info("Previous conversation: " + previousConversationWithSystemMessage);
     CreateChatCompletionRequest createChatCompletionRequest = CreateChatCompletionRequest.newBuilder()
         .model(OPEN_AI_MODEL)
         .messages(new ArrayList<>(previousConversationWithSystemMessage))
@@ -95,6 +101,7 @@ public class OpenAIClient extends BaseLLMClient {
     if (!chatCompletion.choices().isEmpty()) {
       uncommittedHistory.add(new Message(MessageType.REQUEST, instruction));
       uncommittedHistory.add(new Message(MessageType.RESPONSE, new Text(chatCompletion.choices().getFirst().message().content(), "")));
+      logger.info("OpenAI response: " + chatCompletion.choices().getFirst().message().content());
       return new Response(instruction, chatCompletion.choices().getFirst().message().content());
     }
     return null;

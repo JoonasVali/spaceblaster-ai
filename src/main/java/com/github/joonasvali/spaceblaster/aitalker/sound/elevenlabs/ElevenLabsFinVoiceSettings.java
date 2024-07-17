@@ -28,7 +28,7 @@ public class ElevenLabsFinVoiceSettings extends SpaceBlasterVoiceSettings {
 
   @Override
   public double getStyle() {
-    return 0.50;
+    return 0;
   }
 
   @Override
