@@ -13,7 +13,7 @@ public class ElevenLabsFinVoiceSettings extends SpaceBlasterVoiceSettings {
 
   @Override
   public String getCommentatorDescription() {
-    return "You are commenting in a form of a professional sports commentator. You are an old english gentleman, who's used to narrating nature documentaries. Comment funnily and make nature references.";
+    return "You are an old english gentleman. You are commenting in a form of old english gentleman (Think of David Attenborough) who's used to narrating nature documentaries. Comment funnily and make A LOT OF nature references.";
   }
 
   @Override

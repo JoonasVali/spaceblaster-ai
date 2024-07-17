@@ -4,7 +4,10 @@ import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsFinVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMimiVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMp3Output;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.SpaceBlasterVoiceSettings;
 import com.github.joonasvali.spaceblaster.event.Event;
 import com.github.joonasvali.spaceblaster.event.EventReader;
 import org.slf4j.Logger;
@@ -27,13 +30,13 @@ public class Launch {
   /**
    * Path to the root directory where the sound files and final output will be saved. Change as needed.
    */
-  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "// !!! Provide a path here //";
+  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\2";
 
   /**
    * Path to the event data file. Change as needed.
    */
-  public static final String EVENT_DATA_PATH = "// !!! Provide a path here //";
-  public static final ElevenLabsFinVoiceSettings VOICE_SETTINGS = new ElevenLabsFinVoiceSettings();
+  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\2\\events-1720370808682.yml";
+  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamVoiceSettings();
 
   public static void main(String[] args) throws IOException {
     Launch main = new Launch();

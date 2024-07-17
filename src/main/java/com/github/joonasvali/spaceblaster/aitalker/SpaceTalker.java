@@ -21,6 +21,7 @@ public class SpaceTalker {
   public static final String SYSTEM_MESSAGE = """
       Space Blaster is a modern space invaders clone where player controls a spaceship and shoots enemies. 
       The game has multiple levels and the player can collect power-ups, which randomly gives the player a new weapon. 
+      Player sometimes does not want a power-up, because it might be worse than their current weapon.
       The initial weapon the player has is always a cannon. The enemies are similar, but they have different weapons. 
       They also need to be hit with a different amount of damage to be destroyed. If player dies, 
       then the player is invincible for a short period and their weapon is defaulted back to cannon.
@@ -231,7 +232,7 @@ public class SpaceTalker {
     }
 
     private void trimRequestIds() {
-      while (requestIds.size() > 2) {
+      while (requestIds.size() > 3) {
         requestIds.removeFirst();
       }
     }
@@ -335,9 +336,7 @@ public class SpaceTalker {
       String shortTerm = String.format("""
           Event data follows: %s
           Seconds passed from previous event: %ds
-
-           NB! You only have %d second window to comment on this event.
-          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds,  msToSeconds(period.getDuration()));
+          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds);
 
       return new Text(longTerm, shortTerm);
     } else {
@@ -352,9 +351,7 @@ public class SpaceTalker {
       String shortTerm = String.format("""
           Event data follows: %s
           Seconds passed from previous event: %ds
-
-           NB! You only have %d second window to comment on this event.
-          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds, msToSeconds(period.getDuration())
+          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds
       );
 
       return new Text(longTerm, shortTerm);
