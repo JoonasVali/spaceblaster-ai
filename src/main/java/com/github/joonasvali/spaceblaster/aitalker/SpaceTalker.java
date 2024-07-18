@@ -102,6 +102,7 @@ public class SpaceTalker {
       notifyPeriodCompletedListeners(commentary.text, i);
 
       latency = Math.max(latency - latencyReduction + commentary.duration - period.getPeriodDuration(), 0);
+      audioTrackBuilder.validateLastTimestampAfter(period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp);
     }
 
     Path finalSoundFile = commentaryRepository.soundOutputDir.resolve(OUTPUT_SOUND_FILE_NAME + OUTPUT_SOUND_FILE_SUFFIX);
@@ -129,7 +130,7 @@ public class SpaceTalker {
 
     long audioFileDuration = 0;
     if (evaluatedDuration <= limitDuration) {
-      audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration() - latency);
+      audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration());
     }
 
     int failsToShorten = 0;
@@ -152,7 +153,7 @@ public class SpaceTalker {
       boolean exceedsEvaluatedDuration = evaluatedDuration > limitDuration;
 
       if (!exceedsEvaluatedDuration) {
-        audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration() - latency);
+        audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration());
       }
 
       if (exceedsEvaluatedDuration || audioFileDuration > period.getDuration()) {
@@ -163,7 +164,7 @@ public class SpaceTalker {
 
     if (failsToShorten >= SHORTENING_FAILURES_ALLOWED) {
       notifyAbandonShortenSpeechListeners(lastOutputMessage, failsToShorten);
-      var result = commentaryRepository.addSound(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration() - latency);
+      var result = commentaryRepository.addSound(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), period.getPeriodDuration());
       audioFileDuration = result.soundDurationInTrack;
     }
 
@@ -243,10 +244,11 @@ public class SpaceTalker {
       TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
       if (duration <= limitDuration) {
+        long cutoff = periodDuration < limitDuration ? Math.max(duration, periodDuration) : limitDuration;
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
             // Avoid creating a wait time if limitDuration has been artificially increased to a larger window,
             // but duration is smaller than that window.
-            periodDuration < limitDuration ? Math.max(duration, periodDuration) : limitDuration,
+            cutoff,
             outputFile
         );
         requestIds.add(response.requestId());

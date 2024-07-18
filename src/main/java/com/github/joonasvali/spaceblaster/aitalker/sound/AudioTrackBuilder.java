@@ -35,7 +35,7 @@ public class AudioTrackBuilder {
   }
 
   public long getLastVoiceEndTime() {
-    if (voices.size() == 0) {
+    if (voices.isEmpty()) {
       return 0;
     }
     return voices.getLast().startTime + Math.min(voices.getLast().voiceDuration, voices.getLast().voiceCutoffMs);
@@ -59,6 +59,13 @@ public class AudioTrackBuilder {
     appender.create();
 
     return List.copyOf(voices);
+  }
+
+  public void validateLastTimestampAfter(long relativeTimestamp) {
+    var last = voices.getLast();
+    if (last.startTime < relativeTimestamp) {
+      throw new IllegalStateException("Last voice end time is before the relative timestamp: " + getLastVoiceEndTime() + " < " + relativeTimestamp);
+    }
   }
 
 
