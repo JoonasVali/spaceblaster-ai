@@ -1,11 +1,11 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsClient;
-import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsFinVoiceSettings;
-import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamVoiceSettings;
-import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMimiVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamRoastVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMp3Output;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.SpaceBlasterVoiceSettings;
 import com.github.joonasvali.spaceblaster.event.Event;
@@ -30,13 +30,13 @@ public class Launch {
   /**
    * Path to the root directory where the sound files and final output will be saved. Change as needed.
    */
-  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\2";
+  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\1";
 
   /**
    * Path to the event data file. Change as needed.
    */
-  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\2\\events-1720370808682.yml";
-  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamVoiceSettings();
+  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\1\\events-1718825797443.yml";
+  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamRoastVoiceSettings();
 
   public static void main(String[] args) throws IOException {
     Launch main = new Launch();
@@ -64,28 +64,46 @@ public class Launch {
 
       @Override
       public void onCommentaryFailed(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.info("Commentary failed (" + attempt + "): " + lastOutputMessage);
+        logger.debug("Failed to generate commentary. (" + attempt + ")");
       }
 
       @Override
       public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.info("Failed to shorten speech. (" + attempt + ")");
-        logger.info("  speech: " + lastOutputMessage);
+        logger.debug("Failed to shorten speech. (" + attempt + ")");
       }
 
       @Override
-      public void onPeriodProcessingCompleted(String result, int periodIndex, long timeSinceEventMs) {
-        logger.info("Period " + periodIndex + " completed: " + result);
+      public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
+        long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
+        String silence = "";
+        if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
+          silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+        }
+
+        logger.info(
+            event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
+                (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
+                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
+            " Audio: " + event.generatedAudioDurationMs() + "ms, starting at: " + event.generatedAudioRelativeStartTime() + "ms. " +
+                (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
+                silence +
+                "Result \"" + event.result() + "\""
+            );
+
+
+        if (logger.isDebugEnabled()) {
+          logger.debug("Prompt: " + event.inputText());
+        }
       }
 
       @Override
       public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
-        logger.info("Trying resolutely force a shorter message. (" + attempt + ")");
+        logger.debug("Trying resolutely force a shorter message. (" + attempt + ")");
       }
 
       @Override
       public void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs) {
-        logger.info("Abandoning shortening speech. (" + attempt + ")");
+        logger.debug("Abandoning shortening speech. (" + attempt + ")");
       }
     });
 

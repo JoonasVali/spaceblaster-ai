@@ -1,6 +1,7 @@
 package com.github.joonasvali.spaceblaster.aitalker.llm;
 
-import com.github.joonasvali.spaceblaster.aitalker.SpaceTalkListener;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.Util;
 import io.github.stefanbratanov.jvm.openai.ChatClient;
 import io.github.stefanbratanov.jvm.openai.ChatCompletion;
@@ -49,9 +50,9 @@ public class OpenAIClient extends BaseLLMClient {
       public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
         Util.sleep(SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH - timeSinceEventMs);
       }
-
       @Override
-      public void onPeriodProcessingCompleted(String result, int periodIndex, long timeSinceEventMs) {
+      public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
+        long timeSinceEventMs = System.currentTimeMillis() - event.eventTime();
         committedHistory.forEach(message -> message.message().forgetShortTerm());
         Util.sleep(SLEEP_ON_PERIOD_PROCESSED - timeSinceEventMs);
       }
@@ -77,8 +78,8 @@ public class OpenAIClient extends BaseLLMClient {
 
     ChatClient chatClient = openAI.chatClient();
     ChatMessage inputMessage = ChatMessage.userMessage(instruction.toString());
-    logger.info("Running OpenAI with instruction: " + instruction);
-    logger.info("Previous conversation: " + previousConversationWithSystemMessage);
+    logger.debug("Running OpenAI with instruction: " + instruction);
+    logger.debug("Previous conversation: " + previousConversationWithSystemMessage);
     CreateChatCompletionRequest createChatCompletionRequest = CreateChatCompletionRequest.newBuilder()
         .model(OPEN_AI_MODEL)
         .messages(new ArrayList<>(previousConversationWithSystemMessage))
@@ -101,7 +102,7 @@ public class OpenAIClient extends BaseLLMClient {
     if (!chatCompletion.choices().isEmpty()) {
       uncommittedHistory.add(new Message(MessageType.REQUEST, instruction));
       uncommittedHistory.add(new Message(MessageType.RESPONSE, new Text(chatCompletion.choices().getFirst().message().content(), "")));
-      logger.info("OpenAI response: " + chatCompletion.choices().getFirst().message().content());
+      logger.debug("OpenAI response: " + chatCompletion.choices().getFirst().message().content());
       return new Response(instruction, chatCompletion.choices().getFirst().message().content());
     }
     return null;

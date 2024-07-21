@@ -1,5 +1,7 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Text;
@@ -8,6 +10,8 @@ import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.event.Event;
 import com.github.joonasvali.spaceblaster.event.EventType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 
 public class SpaceTalker {
+  private static final Logger logger = LoggerFactory.getLogger(SpaceTalker.class);
   public static final String SYSTEM_MESSAGE = """
       Space Blaster is a modern space invaders clone where player controls a spaceship and shoots enemies. 
       The game has multiple levels and the player can collect power-ups, which randomly gives the player a new weapon. 
@@ -39,7 +44,7 @@ public class SpaceTalker {
   public static final int SHORTENING_RESOLUTE_THRESHOLD = 2;
   public static final String OUTPUT_SOUND_FILE_NAME = "final";
   public static final long LATENCY_THRESHOLD_MS = 300;
-  public static final long MEDIUM_PERIOD_THRESHOLD_MS = 4000;
+  public static final long MEDIUM_PERIOD_THRESHOLD_MS = 2000;
   private final SoundDurationEvaluator soundDurationEvaluator;
   private final LLMClient llmClient;
   private final TextToSpeechClient textToSpeechClient;
@@ -77,7 +82,7 @@ public class SpaceTalker {
       CommentaryContext context = new CommentaryContext(period, 0, input, 0);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
-      notifyPeriodCompletedListeners(commentary.text, 0);
+      notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0, commentary.generatedAudioRelativeStartTime, period.getPeriodDuration(), 0, commentary.retryAttempts, commentary.shorteningAbandoned);
     }
 
     long latency = 0;
@@ -89,7 +94,7 @@ public class SpaceTalker {
       long latencyReduction = 0;
       if (latency > LATENCY_THRESHOLD_MS && period.getDuration() > MEDIUM_PERIOD_THRESHOLD_MS) {
         // replace period with time debt adjusted one to reduce latency.
-        latencyReduction = Math.min(period.getDuration() / 4, latency);
+        latencyReduction = Math.min(period.getDuration() / 2, latency);
         long newPeriodDuration = period.getDuration() - latencyReduction;
         period = new Period(period.getEvent(), new ArrayList<>(period.getSecondaryEvents()), newPeriodDuration);
       }
@@ -99,9 +104,22 @@ public class SpaceTalker {
       CommentaryContext context = new CommentaryContext(period, periods.get(i), i, input, latency, latencyReduction);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
-      notifyPeriodCompletedListeners(commentary.text, i);
 
-      latency = Math.max(latency - latencyReduction + commentary.duration - period.getPeriodDuration(), 0);
+      notifyPeriodCompletedListeners(
+          commentary.text,
+          commentary.input,
+          i,
+          commentary.generatedAudioDurationMs,
+          period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp,
+          commentary.generatedAudioRelativeStartTime,
+          period.getPeriodDuration(),
+          latency,
+          commentary.retryAttempts,
+          commentary.shorteningAbandoned
+      );
+
+      latency = Math.max(latency - latencyReduction + commentary.generatedAudioDurationMs - period.getPeriodDuration(), 0);
+
       audioTrackBuilder.validateLastTimestampAfter(period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp);
     }
 
@@ -114,7 +132,14 @@ public class SpaceTalker {
     return (long) Math.round(duration / 1000f);
   }
 
-  private record Commentary(String text, Long duration) {
+  private record Commentary(
+      String text,
+      String input,
+      long generatedAudioDurationMs,
+      long generatedAudioRelativeStartTime,
+      int retryAttempts,
+      boolean shorteningAbandoned
+  ) {
   }
 
   private Commentary produceCommentary(VoiceCommentaryRepository commentaryRepository, CommentaryContext context) throws IOException {
@@ -134,8 +159,10 @@ public class SpaceTalker {
     }
 
     int failsToShorten = 0;
+    int retries = 0;
 
     while (failsToShorten < SHORTENING_FAILURES_ALLOWED && (evaluatedDuration > limitDuration || audioFileDuration > limitDuration)) {
+      retries++;
       notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten);
       context.addRejectedCommentary(lastOutputMessage, evaluatedDuration, audioFileDuration);
 
@@ -168,7 +195,14 @@ public class SpaceTalker {
       audioFileDuration = result.soundDurationInTrack;
     }
 
-    return new Commentary(lastOutputMessage, audioFileDuration);
+    return new Commentary(
+        lastOutputMessage,
+        context.instructions.toString(),
+        audioFileDuration,
+        commentaryRepository.getLastVoiceStartTime(),
+        retries,
+        failsToShorten >= SHORTENING_FAILURES_ALLOWED
+    );
   }
 
   private void notifyFailToShortenSpeechListeners(String output, int attempt) {
@@ -188,12 +222,33 @@ public class SpaceTalker {
   }
 
 
-  private void notifyPeriodCompletedListeners(String output, int periodIndex) {
+  private void notifyPeriodCompletedListeners(
+      String output,
+      String input,
+      int periodIndex,
+      long generatedAudioDurationMs,
+      long periodRelativeStartTime,
+      long generatedAudioRelativeStartTime,
+      long periodDuration,
+      long inputLatency,
+      int retryAttempts,
+      boolean shorteningAbandoned
+  ) {
     long time = System.currentTimeMillis();
-    listeners.forEach((s) -> {
-      long timeSinceEvent = System.currentTimeMillis() - time;
-      s.onPeriodProcessingCompleted(output, periodIndex, timeSinceEvent);
-    });
+    PeriodProcessingCompletedEvent event = new PeriodProcessingCompletedEvent(
+        output,
+        input,
+        generatedAudioDurationMs,
+        periodRelativeStartTime,
+        generatedAudioRelativeStartTime,
+        periodDuration,
+        periodIndex,
+        inputLatency,
+        retryAttempts,
+        shorteningAbandoned,
+        time
+    );
+    listeners.forEach((s) -> s.onPeriodProcessingCompleted(event));
   }
 
   private void notifyCommentaryFailedListeners(String output, int attempt) {
@@ -278,6 +333,9 @@ public class SpaceTalker {
       return new AddSoundResult(duration, Math.min(cutoff, duration));
     }
 
+    public long getLastVoiceStartTime() {
+      return audioTrackBuilder.getLastVoiceStartTime();
+    }
   }
 
   private record AddSoundResult(Long soundFileDuration, Long soundDurationInTrack) {  }

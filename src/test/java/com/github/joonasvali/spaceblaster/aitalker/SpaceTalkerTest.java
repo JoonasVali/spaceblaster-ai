@@ -1,5 +1,7 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.BaseLLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
@@ -56,8 +58,25 @@ public class SpaceTalkerTest {
       }
 
       @Override
-      public void onPeriodProcessingCompleted(String result, int periodIndex, long timeSinceEventMs) {
+      public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
         speech.nextAnswer();
+        long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
+        String silence = "";
+        if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
+          silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+        }
+
+        System.out.println(
+            event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
+                (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
+                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
+                " Audio: " + event.generatedAudioDurationMs() + "ms, starting at: " + event.generatedAudioRelativeStartTime() + "ms. " +
+                (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
+                silence +
+                "Result \"" + event.result() + "\""
+        );
+
+
       }
 
       @Override
