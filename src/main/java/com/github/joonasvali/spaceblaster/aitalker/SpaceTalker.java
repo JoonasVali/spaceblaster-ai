@@ -24,8 +24,8 @@ import java.util.Map;
 public class SpaceTalker {
   private static final Logger logger = LoggerFactory.getLogger(SpaceTalker.class);
   public static final String SYSTEM_MESSAGE = """
-      Space Blaster is a modern space invaders clone where player controls a spaceship and shoots enemies. 
-      The game has multiple levels and the player can collect power-ups, which randomly gives the player a new weapon. 
+      Space Blaster is a modern space invaders clone where player controls a spaceship and shoots enemies.
+      The game has multiple levels and the player can collect power-ups, which randomly gives the player a new weapon.
       Player sometimes does not want a power-up, because it might be worse than their current weapon.
       The initial weapon the player has is always a cannon. The enemies are similar, but they have different weapons. 
       They also need to be hit with a different amount of damage to be destroyed. If player dies, 
@@ -44,7 +44,7 @@ public class SpaceTalker {
   public static final int SHORTENING_RESOLUTE_THRESHOLD = 2;
   public static final String OUTPUT_SOUND_FILE_NAME = "final";
   public static final long LATENCY_THRESHOLD_MS = 300;
-  public static final long MEDIUM_PERIOD_THRESHOLD_MS = 2000;
+  public static final long MEDIUM_PERIOD_THRESHOLD_MS = 3000;
   private final SoundDurationEvaluator soundDurationEvaluator;
   private final LLMClient llmClient;
   private final TextToSpeechClient textToSpeechClient;
@@ -82,7 +82,14 @@ public class SpaceTalker {
       CommentaryContext context = new CommentaryContext(period, 0, input, 0);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
-      notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0, commentary.generatedAudioRelativeStartTime, period.getDuration(), 0, commentary.retryAttempts, commentary.shorteningAbandoned);
+      notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0,
+          // since this is the first period, the silence is added to the start of the track.
+          commentary.generatedAudioRelativeStartTime + period.getDuration() - commentary.generatedAudioDurationMs,
+          period.getDuration(),
+          0,
+          commentary.retryAttempts,
+          commentary.shorteningAbandoned
+      );
     }
 
     long latency = 0;
@@ -183,7 +190,7 @@ public class SpaceTalker {
         audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration());
       }
 
-      if (exceedsEvaluatedDuration || audioFileDuration > period.getDuration()) {
+      if (exceedsEvaluatedDuration || audioFileDuration > Math.max(period.getDuration(), EventDigester.MIN_PERIOD)) {
         failsToShorten++;
         notifyFailToShortenSpeechListeners(lastOutputMessage, failsToShorten);
       }

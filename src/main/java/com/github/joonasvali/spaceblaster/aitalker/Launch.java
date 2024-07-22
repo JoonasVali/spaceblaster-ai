@@ -77,7 +77,9 @@ public class Launch {
         long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
         String silence = "";
         if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
-          silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+          if (event.periodIndex() != 0) {
+            silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+          }
         }
 
         logger.info(

@@ -129,27 +129,31 @@ public class SpaceTalkerTest {
   }
 
   @Test
-  public void testSpaceTalk1() throws IOException, URISyntaxException {
+  public void testSpaceTalk1() throws IOException {
 
     List<String> llmAnswers = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 7; i++) {
       llmAnswers.add("LLM answer " + i);
     }
 
     List<TestTextToSpeechClient.Entry> ttsAnswers = List.of(
         new TestTextToSpeechClient.Entry(20000, 20000),
         new TestTextToSpeechClient.Entry(4095, 4095),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(4000, 4000),
+        new TestTextToSpeechClient.Entry(2300, 2300),
+        new TestTextToSpeechClient.Entry(3200, 3200),
+        new TestTextToSpeechClient.Entry(2300, 2300),
+        new TestTextToSpeechClient.Entry(3200, 3200),
         new TestTextToSpeechClient.Entry(15000, 15000)
     );
 
     String expected = """
         0 20000 23899 LLM answer 0 ${PROJECT_DIR}\\0 - 0.wav
         23899 4095 4095 LLM answer 1 ${PROJECT_DIR}\\1 - 23899.wav
-        27994 3000 5604 LLM answer 2 ${PROJECT_DIR}\\2 - 27994.wav
-        33598 4000 5665 LLM answer 3 ${PROJECT_DIR}\\3 - 33598.wav
-        39263 15000 20000 LLM answer 4 ${PROJECT_DIR}\\4 - 39263.wav
+        27994 2300 2399 LLM answer 2 ${PROJECT_DIR}\\2 - 27994.wav
+        30393 3200 3205 LLM answer 3 ${PROJECT_DIR}\\3 - 30393.wav
+        33598 2300 2394 LLM answer 4 ${PROJECT_DIR}\\4 - 33598.wav
+        35992 3200 3271 LLM answer 5 ${PROJECT_DIR}\\5 - 35992.wav
+        39263 15000 20000 LLM answer 6 ${PROJECT_DIR}\\6 - 39263.wav
         """;
 
     runTest("./short-run/short-run.yml", llmAnswers, ttsAnswers, expected, 59263);
@@ -194,25 +198,25 @@ public class SpaceTalkerTest {
     String expected = """
         0 16000 23906 LLM answer 0 ${PROJECT_DIR}\\0 - 0.wav
         23906 10000 18942 LLM answer 1 ${PROJECT_DIR}\\1 - 23906.wav
-        42848 3000 3000 LLM answer 2 ${PROJECT_DIR}\\2 - 42848.wav
+        42848 3000 4000 LLM answer 2 ${PROJECT_DIR}\\2 - 42848.wav
         45848 14000 18865 LLM answer 3 ${PROJECT_DIR}\\3 - 45848.wav
         64713 4000 10285 LLM answer 4 ${PROJECT_DIR}\\4 - 64713.wav
         74998 14000 20234 LLM answer 5 ${PROJECT_DIR}\\5 - 74998.wav
-        95232 3000 3000 LLM answer 6 ${PROJECT_DIR}\\6 - 95232.wav
-        98232 3000 3000 LLM answer 7 ${PROJECT_DIR}\\7 - 98232.wav
-        101232 2000 3900 LLM answer 8 ${PROJECT_DIR}\\8 - 101232.wav
+        95232 3000 4000 LLM answer 6 ${PROJECT_DIR}\\6 - 95232.wav
+        98232 3000 4000 LLM answer 7 ${PROJECT_DIR}\\7 - 98232.wav
+        101232 2000 4000 LLM answer 8 ${PROJECT_DIR}\\8 - 101232.wav
         103232 3000 11466 LLM answer 9 ${PROJECT_DIR}\\9 - 103232.wav
         114698 2000 9418 LLM answer 10 ${PROJECT_DIR}\\10 - 114698.wav
         124116 6000 5550 LLM answer 14 ${PROJECT_DIR}\\11 - 124116.wav
         129666 6000 10065 LLM answer 15 ${PROJECT_DIR}\\12 - 129666.wav
         139731 4000 4000 LLM answer 16 ${PROJECT_DIR}\\13 - 139731.wav
         143731 6000 9151 LLM answer 17 ${PROJECT_DIR}\\14 - 143731.wav
-        152882 2000 2000 LLM answer 18 ${PROJECT_DIR}\\15 - 152882.wav
+        152882 2000 4000 LLM answer 18 ${PROJECT_DIR}\\15 - 152882.wav
         154882 3000 7132 LLM answer 19 ${PROJECT_DIR}\\16 - 154882.wav
         162014 14000 20000 LLM answer 20 ${PROJECT_DIR}\\17 - 162014.wav
         """;
 
-    runTest("./long-run/long-run.yml", llmAnswers, ttsAnswers, expected, 183914);
+    runTest("./long-run/long-run.yml", llmAnswers, ttsAnswers, expected, 189014);
   }
 
 
