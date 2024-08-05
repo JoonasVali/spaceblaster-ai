@@ -1,6 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.llm;
 
-import com.github.joonasvali.spaceblaster.aitalker.SpaceTalkListener;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 
 public interface LLMClient {
   Response run(Text instruction);

@@ -1,6 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs;
 
-import com.github.joonasvali.spaceblaster.aitalker.SpaceTalkListener;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechOutput;

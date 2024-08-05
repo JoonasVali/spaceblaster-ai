@@ -36,10 +36,6 @@ public class Period {
   }
 
   public Long getDuration() {
-    return Math.max(EventDigester.MIN_PERIOD, duration);
-  }
-
-  public Long getPeriodDuration() {
     return duration;
   }
 

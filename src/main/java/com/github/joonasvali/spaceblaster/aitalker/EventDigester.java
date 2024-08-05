@@ -11,7 +11,7 @@ public class EventDigester {
 
   public static final int MAX_PERIOD_MS = 20000;
   // This will not be respected if the next event is a high priority event and happens before this period.
-  public static final int MIN_PERIOD = 4000;
+  public static final int MIN_PERIOD = 2000;
   private static final Set<EventType> highPriorityEvents = Set.of(EventType.PLAYER_KILLED, EventType.GAME_OVER, EventType.VICTORY, EventType.ROUND_COMPLETED, EventType.POWERUP_COLLECTED);
   private static final Set<EventType> lowPriorityEvents = Set.of(EventType.ENEMY_HIT, EventType.ENEMY_KILLED, EventType.PLAYER_NO_LONGER_INVINCIBLE, EventType.ENEMY_FORMATION_CHANGES_MOVEMENT_DIRECTION);
   public static final int END_OF_GAME_DURATION = 20000;

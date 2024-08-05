@@ -1,6 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.sound;
 
-import com.github.joonasvali.spaceblaster.aitalker.SpaceTalkListener;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 
 import java.io.IOException;
 import java.nio.file.Path;
