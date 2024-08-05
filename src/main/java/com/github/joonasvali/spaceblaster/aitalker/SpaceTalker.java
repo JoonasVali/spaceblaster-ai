@@ -178,7 +178,7 @@ public class SpaceTalker {
         notifyResoluteShorteningMessage(lastOutputMessage, evaluatedDuration, limitDuration, failsToShorten);
         anotherResponse = llmClient.run(new Text(RESOLUTE_SHORTER_MESSAGE_INSTRUCTION, ""));
       } else {
-        anotherResponse = getShorteningMessage(Math.max(evaluatedDuration, audioFileDuration), limitDuration);
+        anotherResponse = getShortenedMessage(Math.max(evaluatedDuration, audioFileDuration), limitDuration);
       }
 
       lastOutputMessage = anotherResponse.outputMessage();
@@ -343,7 +343,7 @@ public class SpaceTalker {
 
   private record AddSoundResult(Long soundFileDuration, Long soundDurationInTrack) {  }
 
-  private Response getShorteningMessage(long durationMs, long limitDurationMs) {
+  private Response getShortenedMessage(long durationMs, long limitDurationMs) {
     long durationSeconds = msToSeconds(durationMs);
     long limitDurationSeconds = msToSeconds(limitDurationMs);
 
