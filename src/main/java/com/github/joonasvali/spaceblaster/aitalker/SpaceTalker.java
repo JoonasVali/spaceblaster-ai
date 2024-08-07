@@ -1,6 +1,8 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
@@ -80,6 +82,7 @@ public class SpaceTalker {
       commentaryRepository = new VoiceCommentaryRepository(period.getEvent().eventTimestamp, projectName);
 
       CommentaryContext context = new CommentaryContext(period, 0, input, 0);
+      notifyPeriodProcessingStartedListeners(0, 0, period.getDuration(), 0);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
       notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0,
@@ -105,6 +108,8 @@ public class SpaceTalker {
         long newPeriodDuration = period.getDuration() - latencyReduction;
         period = new Period(period.getEvent(), new ArrayList<>(period.getSecondaryEvents()), newPeriodDuration);
       }
+
+      notifyPeriodProcessingStartedListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), latency);
 
       input = getEventInstructions(msToSeconds(lastPeriod.getDuration() + latency), period, secondaryEventsFromLastPeriod, latency);
 
@@ -170,7 +175,7 @@ public class SpaceTalker {
 
     while (failsToShorten < SHORTENING_FAILURES_ALLOWED && (evaluatedDuration > limitDuration || audioFileDuration > limitDuration)) {
       retries++;
-      notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten);
+      notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten, context.periodIndex, eventTimeStamp, period.getDuration(), latency);
       context.addRejectedCommentary(lastOutputMessage, evaluatedDuration, audioFileDuration);
 
       Response anotherResponse;
@@ -192,7 +197,6 @@ public class SpaceTalker {
 
       if (exceedsEvaluatedDuration || audioFileDuration > Math.max(period.getDuration(), EventDigester.MIN_PERIOD)) {
         failsToShorten++;
-        notifyFailToShortenSpeechListeners(lastOutputMessage, failsToShorten);
       }
     }
 
@@ -211,15 +215,6 @@ public class SpaceTalker {
         failsToShorten >= SHORTENING_FAILURES_ALLOWED
     );
   }
-
-  private void notifyFailToShortenSpeechListeners(String output, int attempt) {
-    long time = System.currentTimeMillis();
-    listeners.forEach((s) -> {
-      long timeSinceEvent = System.currentTimeMillis() - time;
-      s.onFailToShortenSpeech(output, attempt, timeSinceEvent);
-    });
-  }
-
   private void notifyAbandonShortenSpeechListeners(String output, int attempt) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
@@ -228,6 +223,22 @@ public class SpaceTalker {
     });
   }
 
+  private void notifyPeriodProcessingStartedListeners(
+      int periodIndex,
+      long periodRelativeStartTime,
+      long periodDuration,
+      long inputLatency
+  ) {
+    long time = System.currentTimeMillis();
+    PeriodProcessingStartedEvent event = new PeriodProcessingStartedEvent(
+        inputLatency,
+        periodDuration,
+        periodIndex,
+        periodRelativeStartTime,
+        time
+    );
+    listeners.forEach((s) -> s.onPeriodProcessingStarted(event));
+  }
 
   private void notifyPeriodCompletedListeners(
       String output,
@@ -258,11 +269,25 @@ public class SpaceTalker {
     listeners.forEach((s) -> s.onPeriodProcessingCompleted(event));
   }
 
-  private void notifyCommentaryFailedListeners(String output, int attempt) {
+  private void notifyCommentaryFailedListeners(
+      String output,
+      int attempt,
+      int periodIndex,
+      long periodRelativeStartTime,
+      long periodDuration,
+      long inputLatency
+  ) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
-      long timeSinceEvent = System.currentTimeMillis() - time;
-      s.onCommentaryFailed(output, attempt, timeSinceEvent);
+      s.onCommentaryFailed(new CommentaryFailedEvent(
+          attempt,
+          output,
+          inputLatency,
+          periodDuration,
+          periodIndex,
+          periodRelativeStartTime,
+          time
+      ));
     });
   }
 

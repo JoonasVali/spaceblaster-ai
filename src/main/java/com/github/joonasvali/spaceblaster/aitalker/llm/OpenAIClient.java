@@ -1,6 +1,8 @@
 package com.github.joonasvali.spaceblaster.aitalker.llm;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.Util;
 import io.github.stefanbratanov.jvm.openai.ChatClient;
@@ -42,14 +44,15 @@ public class OpenAIClient extends BaseLLMClient {
   public SpaceTalkListener getSpaceTalkListener() {
     return new SpaceTalkListener() {
       @Override
-      public void onCommentaryFailed(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-
+      public void onCommentaryFailed(CommentaryFailedEvent event) {
+        Util.sleep(SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH - (System.currentTimeMillis() - event.eventTime()));
       }
 
       @Override
-      public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        Util.sleep(SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH - timeSinceEventMs);
+      public void onPeriodProcessingStarted(PeriodProcessingStartedEvent event) {
+
       }
+
       @Override
       public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
         long timeSinceEventMs = System.currentTimeMillis() - event.eventTime();

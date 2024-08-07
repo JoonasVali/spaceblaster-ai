@@ -1,6 +1,8 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
@@ -63,13 +65,13 @@ public class Launch {
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
-      public void onCommentaryFailed(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.debug("Failed to generate commentary. (" + attempt + ")");
+      public void onCommentaryFailed(CommentaryFailedEvent event) {
+        logger.debug("Failed to generate commentary. (" + event.attempt() + ")");
       }
 
       @Override
-      public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.debug("Failed to shorten speech. (" + attempt + ")");
+      public void onPeriodProcessingStarted(PeriodProcessingStartedEvent event) {
+
       }
 
       @Override
