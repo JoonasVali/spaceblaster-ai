@@ -233,7 +233,7 @@ public class SpaceTalker {
     long time = System.currentTimeMillis();
     PeriodProcessingStartedEvent event = new PeriodProcessingStartedEvent(
         inputLatency,
-        periodDuration,
+        Math.max(periodDuration, EventDigester.MIN_PERIOD),
         periodIndex,
         periodRelativeStartTime,
         time
@@ -260,7 +260,7 @@ public class SpaceTalker {
         generatedAudioDurationMs,
         periodRelativeStartTime,
         generatedAudioRelativeStartTime,
-        periodDuration,
+        Math.max(periodDuration, EventDigester.MIN_PERIOD),
         periodIndex,
         inputLatency,
         retryAttempts,
@@ -284,7 +284,7 @@ public class SpaceTalker {
           attempt,
           output,
           inputLatency,
-          periodDuration,
+          Math.max(periodDuration, EventDigester.MIN_PERIOD),
           periodIndex,
           periodRelativeStartTime,
           time
@@ -295,7 +295,14 @@ public class SpaceTalker {
   private void notifyResoluteShorteningMessage(int periodIndex, String output, long duration, long limitDuration, int attempt) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
-      s.onResoluteShorteningMessage(new ResoluteShorteningMessageEvent(periodIndex, output, duration, limitDuration, attempt, time));
+      s.onResoluteShorteningMessage(new ResoluteShorteningMessageEvent(
+          periodIndex,
+          output,
+          duration,
+          limitDuration,
+          attempt,
+          time
+      ));
     });
   }
 
