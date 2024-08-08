@@ -1,8 +1,10 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
@@ -180,7 +182,7 @@ public class SpaceTalker {
 
       Response anotherResponse;
       if (failsToShorten >= SHORTENING_RESOLUTE_THRESHOLD) {
-        notifyResoluteShorteningMessage(lastOutputMessage, evaluatedDuration, limitDuration, failsToShorten);
+        notifyResoluteShorteningMessage(context.periodIndex, lastOutputMessage, evaluatedDuration, limitDuration, failsToShorten);
         anotherResponse = llmClient.run(new Text(RESOLUTE_SHORTER_MESSAGE_INSTRUCTION, ""));
       } else {
         anotherResponse = getShortenedMessage(Math.max(evaluatedDuration, audioFileDuration), limitDuration);
@@ -201,7 +203,7 @@ public class SpaceTalker {
     }
 
     if (failsToShorten >= SHORTENING_FAILURES_ALLOWED) {
-      notifyAbandonShortenSpeechListeners(lastOutputMessage, failsToShorten);
+      notifyAbandonShortenSpeechListeners(context.periodIndex, lastOutputMessage, failsToShorten);
       var result = commentaryRepository.addSound(lastOutputMessage, eventTimeStamp + latency, period.getDuration());
       audioFileDuration = result.soundDurationInTrack;
     }
@@ -215,11 +217,10 @@ public class SpaceTalker {
         failsToShorten >= SHORTENING_FAILURES_ALLOWED
     );
   }
-  private void notifyAbandonShortenSpeechListeners(String output, int attempt) {
+  private void notifyAbandonShortenSpeechListeners(int periodIndex, String output, int attempt) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
-      long timeSinceEvent = System.currentTimeMillis() - time;
-      s.onAbandonShortenSpeech(output, attempt, timeSinceEvent);
+      s.onAbandonShortenSpeech(new AbandonShortenSpeechEvent(periodIndex, output, attempt, time));
     });
   }
 
@@ -291,11 +292,10 @@ public class SpaceTalker {
     });
   }
 
-  private void notifyResoluteShorteningMessage(String output, long duration, long limitDuration, int attempt) {
+  private void notifyResoluteShorteningMessage(int periodIndex, String output, long duration, long limitDuration, int attempt) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
-      long timeSinceEvent = System.currentTimeMillis() - time;
-      s.onResoluteShorteningMessage(output, duration, limitDuration, attempt, timeSinceEvent);
+      s.onResoluteShorteningMessage(new ResoluteShorteningMessageEvent(periodIndex, output, duration, limitDuration, attempt, time));
     });
   }
 

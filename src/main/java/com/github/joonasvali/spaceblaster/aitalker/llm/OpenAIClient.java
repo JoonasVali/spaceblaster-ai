@@ -1,8 +1,10 @@
 package com.github.joonasvali.spaceblaster.aitalker.llm;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.Util;
 import io.github.stefanbratanov.jvm.openai.ChatClient;
@@ -61,12 +63,12 @@ public class OpenAIClient extends BaseLLMClient {
       }
 
       @Override
-      public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
+      public void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event) {
         // Nothing
       }
 
       @Override
-      public void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs) {
+      public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
         // Nothing
       }
     };

@@ -6,7 +6,7 @@ public interface SpaceTalkListener {
   void onPeriodProcessingStarted(PeriodProcessingStartedEvent event);
   void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event);
 
-  void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs);
+  void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event);
 
-  void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs);
+  void onAbandonShortenSpeech(AbandonShortenSpeechEvent event);
 }

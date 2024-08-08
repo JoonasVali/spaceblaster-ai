@@ -1,8 +1,10 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
@@ -101,13 +103,13 @@ public class Launch {
       }
 
       @Override
-      public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
-        logger.debug("Trying resolutely force a shorter message. (" + attempt + ")");
+      public void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event) {
+        logger.debug("Trying resolutely force a shorter message. (" + event.attempt() + ")");
       }
 
       @Override
-      public void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs) {
-        logger.debug("Abandoning shortening speech. (" + attempt + ")");
+      public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
+        logger.debug("Abandoning shortening speech. (" + event + ")");
       }
     });
 
