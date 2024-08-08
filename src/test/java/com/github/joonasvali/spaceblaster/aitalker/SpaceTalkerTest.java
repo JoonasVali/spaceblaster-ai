@@ -149,13 +149,30 @@ public class SpaceTalkerTest {
   }
 
   @Test
-  public void testSpaceTalk1() throws IOException {
+  public void testSpaceTalkRetryWithEvaluatedDurationFailOnly() throws IOException {
     TestController testController = new TestController() {
       @Override
       public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
         if (periodIndex == 2 && attempt < 3) {
           return periodDuration + 100;
         }
+        return periodDuration;
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        return periodDuration;
+      }
+    };
+
+    runTest("./short-run/short-run.yml", testController);
+  }
+
+  @Test
+  public void testSpaceTalkRetryWithRealDurationFailOnly() throws IOException {
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
         return periodDuration;
       }
 
@@ -268,7 +285,7 @@ public class SpaceTalkerTest {
 
     public void setAnswer(int periodIndex, long periodEvaluatedDuration, long periodDuration) {
       answers.clear();
-      answers.add(new Entry(periodIndex, periodDuration, periodDuration));
+      answers.add(new Entry(periodIndex, periodEvaluatedDuration, periodDuration));
     }
 
     private record Entry (int periodIndex, long nextEstimatedDurationMs, long nextDurationMs) { }
