@@ -148,7 +148,9 @@ public class SpaceTalkerTest {
     }
 
     long lastPeriodTimestamp = periods.getLast().getEvent().eventTimestamp - firstEventTimestamp;
-    Assertions.assertTrue(WavDuration.getDuration(talk.soundFile()) > lastPeriodTimestamp + EventDigester.MIN_PERIOD, "The final sound file is shorter than last period timestamp + " + EventDigester.MIN_PERIOD);
+
+    long finalSoundFileDuration = WavDuration.getDuration(talk.soundFile());
+    Assertions.assertTrue(finalSoundFileDuration > lastPeriodTimestamp + EventDigester.MIN_PERIOD, "The final sound file is shorter (" + finalSoundFileDuration + " ms) than last period timestamp + " + EventDigester.MIN_PERIOD);
   }
 
   @Test
@@ -158,7 +160,7 @@ public class SpaceTalkerTest {
       @Override
       public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
         if (periodIndex == 2 && attempt < 3) {
-          return periodDuration + 100;
+          return periodDuration + 2100;
         }
         return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
       }
@@ -184,13 +186,55 @@ public class SpaceTalkerTest {
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
         if (periodIndex == 2 && attempt < 3) {
-          return periodDuration + 100;
+          return periodDuration + 2100;
         }
         return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
       }
     };
 
     runTest("./short-run/short-run.yml", testController);
+  }
+
+  @Test
+  public void testShortSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f) + periodDuration / 2);
+      }
+    };
+
+    runTest("./short-run/short-run.yml", testController);
+  }
+
+  @Test
+  public void testLongSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f) + periodDuration / 2);
+      }
+    };
+
+    runTest("./long-run/long-run.yml", testController);
   }
 
   @Test

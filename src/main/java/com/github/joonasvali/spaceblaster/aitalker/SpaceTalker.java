@@ -89,7 +89,7 @@ public class SpaceTalker {
       llmClient.commitHistoryBySquashing();
       notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0,
           // since this is the first period, the silence is added to the start of the track.
-          commentary.generatedAudioRelativeStartTime + period.getDuration() - commentary.generatedAudioDurationMs,
+          Math.max(0, commentary.generatedAudioRelativeStartTime + period.getDuration() - commentary.generatedAudioDurationMs),
           period.getDuration(),
           0,
           commentary.retryAttempts,
@@ -156,6 +156,11 @@ public class SpaceTalker {
   ) {
   }
 
+  private boolean isAcceptableDuration(long duration, long limitDuration) {
+    // Allow to go a bit over the limit.
+    return duration <= limitDuration + Math.min(4000, Math.max(1000, limitDuration / 3));
+  }
+
   private Commentary produceCommentary(VoiceCommentaryRepository commentaryRepository, CommentaryContext context) throws IOException {
     Response response = llmClient.run(context.instructions);
     long evaluatedDuration = soundDurationEvaluator.evaluateDurationInMs(response.outputMessage());
@@ -168,14 +173,14 @@ public class SpaceTalker {
     long limitDuration = Math.max(period.getDuration(), EventDigester.MIN_PERIOD);
 
     long audioFileDuration = 0;
-    if (evaluatedDuration <= limitDuration) {
+    if (isAcceptableDuration(evaluatedDuration, limitDuration)) {
       audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration());
     }
 
     int failsToShorten = 0;
     int retries = 0;
 
-    while (failsToShorten < SHORTENING_FAILURES_ALLOWED && (evaluatedDuration > limitDuration || audioFileDuration > limitDuration)) {
+    while (failsToShorten < SHORTENING_FAILURES_ALLOWED && (!isAcceptableDuration(evaluatedDuration, limitDuration) || !isAcceptableDuration(audioFileDuration, limitDuration))) {
       retries++;
       notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten, context.periodIndex, eventTimeStamp, period.getDuration(), latency);
       context.addRejectedCommentary(lastOutputMessage, evaluatedDuration, audioFileDuration);
@@ -191,13 +196,13 @@ public class SpaceTalker {
       lastOutputMessage = anotherResponse.outputMessage();
       evaluatedDuration = soundDurationEvaluator.evaluateDurationInMs(anotherResponse.outputMessage());
 
-      boolean exceedsEvaluatedDuration = evaluatedDuration > limitDuration;
+      boolean exceedsEvaluatedDuration = !isAcceptableDuration(evaluatedDuration, limitDuration);
 
       if (!exceedsEvaluatedDuration) {
         audioFileDuration = commentaryRepository.addSoundConditionally(lastOutputMessage, eventTimeStamp + latency, period.getDuration());
       }
 
-      if (exceedsEvaluatedDuration || audioFileDuration > Math.max(period.getDuration(), EventDigester.MIN_PERIOD)) {
+      if (exceedsEvaluatedDuration || !isAcceptableDuration(audioFileDuration, Math.max(period.getDuration(), EventDigester.MIN_PERIOD))) {
         failsToShorten++;
       }
     }
@@ -337,8 +342,8 @@ public class SpaceTalker {
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
       TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
-      if (duration <= Math.max(periodDuration, EventDigester.MIN_PERIOD)) {
-        long cutoff = Math.max(periodDuration, EventDigester.MIN_PERIOD);
+      if (isAcceptableDuration(duration, Math.max(periodDuration, EventDigester.MIN_PERIOD))) {
+        long cutoff = periodDuration; // Math.max(periodDuration, EventDigester.MIN_PERIOD);
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
             cutoff,
             outputFile
@@ -357,7 +362,7 @@ public class SpaceTalker {
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
       TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
-      long cutoff = Math.max(periodDuration, EventDigester.MIN_PERIOD);
+      long cutoff = periodDuration; // Math.max(periodDuration, EventDigester.MIN_PERIOD);
       audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
           cutoff,
           outputFile);
