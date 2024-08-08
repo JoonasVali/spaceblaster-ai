@@ -43,7 +43,7 @@ public class SpaceTalkerTest {
     long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt);
     long getSoundRealDuration(int periodIndex, long periodDuration, int attempt);
   }
-  public void runTest(String eventFilePath, TestController testController) throws IOException {
+  private void runTest(String eventFilePath, TestController testController) throws IOException {
     List<Event> events = getEvents(eventFilePath);
 
     TestTextToSpeechClient speech = new TestTextToSpeechClient();
@@ -130,10 +130,18 @@ public class SpaceTalkerTest {
 
     long firstEventTimestamp = events.getFirst().eventTimestamp;
     Assertions.assertEquals(voices.size(), periods.size());
+
+    long lastVoiceStartTimeTimestamp = 0;
     for (int i = 0; i < voices.size(); i++) {
       AudioTrackBuilder.TimedVoice voice = voices.get(i);
       long periodStart = periods.get(i).getEvent().eventTimestamp - firstEventTimestamp;
       Assertions.assertTrue(voice.startTime() >= periodStart, "Voice start time " + voice.startTime() + " is before period start " + periodStart);
+
+      long currentVoiceStartTimestamp = voices.get(i).startTime();
+      if (currentVoiceStartTimestamp < lastVoiceStartTimeTimestamp) {
+        throw new RuntimeException("Voice start time is before previous voice start time: " + i + " " + currentVoiceStartTimestamp + " " + lastVoiceStartTimeTimestamp);
+      }
+      lastVoiceStartTimeTimestamp = currentVoiceStartTimestamp;
     }
 
     long lastPeriodTimestamp = periods.getLast().getEvent().eventTimestamp - firstEventTimestamp;
@@ -178,6 +186,34 @@ public class SpaceTalkerTest {
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
         if (periodIndex == 12) {
           return periodDuration + 1000;
+        }
+        return periodDuration;
+      }
+    };
+    runTest("./long-run/long-run.yml", testController);
+  }
+
+  @Test
+  public void testSpaceTalk3() throws IOException {
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        if (periodIndex == 14) {
+          return periodDuration + 2000;
+        }
+        return periodDuration;
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        if (periodIndex == 14) {
+          return periodDuration + 2000;
         }
         return periodDuration;
       }
