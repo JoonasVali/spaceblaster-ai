@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
@@ -110,6 +111,11 @@ public class Launch {
       @Override
       public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
         logger.debug("Abandoning shortening speech. (" + event + ")");
+      }
+
+      @Override
+      public void onIgnorePeriod(PeriodIgnoredEvent event) {
+        logger.debug("Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
       }
     });
 

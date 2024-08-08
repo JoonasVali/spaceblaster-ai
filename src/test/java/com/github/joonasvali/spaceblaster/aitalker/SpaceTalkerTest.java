@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
@@ -37,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpaceTalkerTest {
   @TempDir
@@ -53,6 +55,7 @@ public class SpaceTalkerTest {
     TestLLMClient llmClient = new TestLLMClient();
 
     SpaceTalker spaceTalker = new SpaceTalker(speech, llmClient, tempDir);
+    AtomicInteger ignoredPeriods = new AtomicInteger(0);
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
@@ -104,6 +107,12 @@ public class SpaceTalkerTest {
       public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
 
       }
+
+      @Override
+      public void onIgnorePeriod(PeriodIgnoredEvent event) {
+        System.out.println(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
+        ignoredPeriods.incrementAndGet();
+      }
     });
 
 
@@ -132,7 +141,7 @@ public class SpaceTalkerTest {
     }
 
     long firstEventTimestamp = events.getFirst().eventTimestamp;
-    Assertions.assertEquals(voices.size(), periods.size());
+    Assertions.assertEquals(voices.size(), periods.size() - ignoredPeriods.get());
 
     long lastVoiceStartTimeTimestamp = 0;
     for (int i = 0; i < voices.size(); i++) {
@@ -230,7 +239,7 @@ public class SpaceTalkerTest {
         if (periodIndex == 2) {
           return periodDuration + 2100;
         }
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f) + periodDuration / 2);
+        return (long) (periodDuration - ((random.nextFloat() * periodDuration / 2f) * (random.nextBoolean() ? -1 : 1)));
       }
     };
 

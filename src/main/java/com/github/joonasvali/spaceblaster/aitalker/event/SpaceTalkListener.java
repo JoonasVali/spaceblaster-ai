@@ -9,4 +9,6 @@ public interface SpaceTalkListener {
   void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event);
 
   void onAbandonShortenSpeech(AbandonShortenSpeechEvent event);
+
+  void onIgnorePeriod(PeriodIgnoredEvent event);
 }
