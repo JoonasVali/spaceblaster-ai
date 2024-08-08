@@ -146,6 +146,7 @@ public class SpaceTalker {
           commentary.shorteningAbandoned
       );
 
+      unaddressedEvents.clear();
       latency = Math.max(latency - latencyReduction + commentary.generatedAudioDurationMs - period.getDuration(), 0);
 
       audioTrackBuilder.validateLastTimestampAfter(period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp);
