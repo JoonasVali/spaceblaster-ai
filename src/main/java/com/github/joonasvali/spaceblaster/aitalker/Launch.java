@@ -92,7 +92,7 @@ public class Launch {
             event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
                 (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
                 (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
-            " Audio: " + event.generatedAudioDurationMs() + "ms, starting at: " + event.generatedAudioRelativeStartTime() + "ms. " +
+            " Audio: " + event.generatedAudioDurationMs() + "ms, playtime: " + event.generatedAudioRelativeStartTime() + " -> " + (event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs()) + ". " +
                 (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
                 silence +
                 "Result \"" + event.result() + "\""

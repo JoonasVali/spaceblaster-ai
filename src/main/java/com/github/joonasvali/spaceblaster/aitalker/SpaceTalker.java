@@ -81,6 +81,7 @@ public class SpaceTalker {
 
     Text input;
     VoiceCommentaryRepository commentaryRepository;
+    long latency;
     {
       Event firstEvent = period.getEvent();
       input = getGameIntroductionInstructions(firstEvent, playerName, period.getDuration());
@@ -99,9 +100,8 @@ public class SpaceTalker {
           commentary.retryAttempts,
           commentary.shorteningAbandoned
       );
+      latency = Math.max(commentary.generatedAudioDurationMs - period.getDuration(), 0);
     }
-
-    long latency = 0;
 
     for (int i = 1; i < periods.size(); i++) {
       Period lastPeriod = period;

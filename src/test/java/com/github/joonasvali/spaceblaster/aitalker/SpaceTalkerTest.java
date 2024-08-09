@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class SpaceTalkerTest {
@@ -56,6 +57,7 @@ public class SpaceTalkerTest {
 
     SpaceTalker spaceTalker = new SpaceTalker(speech, llmClient, tempDir);
     AtomicInteger ignoredPeriods = new AtomicInteger(0);
+    AtomicBoolean lastPeriodEndedWithSilence =  new AtomicBoolean(false);
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
@@ -74,15 +76,23 @@ public class SpaceTalkerTest {
       public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
         long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
         String silence = "";
+
+        if (lastPeriodEndedWithSilence.get() && event.inputLatency() > 0) {
+          throw new RuntimeException("There is a latency, but last period ended with silence, this should never happen. " + event.periodIndex());
+        }
+
         if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
           silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+          lastPeriodEndedWithSilence.set(true);
+        } else {
+          lastPeriodEndedWithSilence.set(false);
         }
 
         System.out.println(
             event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
                 (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
                 (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
-                " Audio: " + event.generatedAudioDurationMs() + "ms, starting at: " + event.generatedAudioRelativeStartTime() + "ms. " +
+                " Audio: " + event.generatedAudioDurationMs() + "ms, playtime: " + event.generatedAudioRelativeStartTime() + " -> " + (event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs()) + ". " +
                 (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
                 silence +
                 "Result \"" + event.result() + "\""
@@ -112,6 +122,7 @@ public class SpaceTalkerTest {
       public void onIgnorePeriod(PeriodIgnoredEvent event) {
         System.out.println(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
         ignoredPeriods.incrementAndGet();
+        lastPeriodEndedWithSilence.set(false);
       }
     });
 
@@ -218,7 +229,7 @@ public class SpaceTalkerTest {
         if (periodIndex == 2) {
           return periodDuration + 2100;
         }
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f) + periodDuration / 2);
+        return (long) (periodDuration - ((random.nextFloat() * periodDuration / 2f) * (random.nextBoolean() ? -1 : 1)));
       }
     };
 
