@@ -66,10 +66,12 @@ public class EventSerializer {
     }
     strb.append("Player has ").append(event.playerLivesLeft).append(" of ").append(event.playerLivesOriginal).append(" lives left.");
     strb.append("\n");
-    strb.append("Player has collected ").append(event.powerUpsCollectedThisRoundCount).append(" power-ups this round.");
-    strb.append("\n");
+    if (event.powerUpsCollectedThisRoundCount > 0) {
+      strb.append("Player has collected ").append(event.powerUpsCollectedThisRoundCount).append(" power-ups this round.");
+      strb.append("\n");
+    }
     if (event.powerUpsMissedCount > 0) {
-      strb.append("Player has missed ").append(event.powerUpsMissedCount).append(" power-ups this round.");
+      strb.append("Player has missed ").append(event.powerUpsMissedCount).append(" power-ups in total.");
       strb.append("\n");
     }
     strb.append("Player has collected a total of ").append(event.powerUpsCollectedTotalCount).append(" power-ups.");
@@ -95,7 +97,7 @@ public class EventSerializer {
     strb.append("Player is wielding a weapon: ").append(event.playerWeapon).append(".");
     strb.append("\n");
     if (!event.playerDead) {
-      strb.append("Is Player moving: ").append(event.playerIsMoving).append(".");
+      strb.append("Is Player currently in motion: ").append(event.playerIsMoving).append(".");
       strb.append("\n");
       if (!event.inBetweenRounds) {
         strb.append("Is Player invincible: ").append(event.playerInvincible).append(".");

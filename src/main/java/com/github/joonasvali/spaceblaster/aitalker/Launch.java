@@ -11,6 +11,7 @@ import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamRoastVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMimiVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMp3Output;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.SpaceBlasterVoiceSettings;
 import com.github.joonasvali.spaceblaster.event.Event;
@@ -115,7 +116,7 @@ public class Launch {
 
       @Override
       public void onIgnorePeriod(PeriodIgnoredEvent event) {
-        logger.debug("Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
+        logger.info(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
       }
     });
 
