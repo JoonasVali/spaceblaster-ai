@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
@@ -59,6 +60,7 @@ public class SpaceTalker {
   private final ArrayList<SpaceTalkListener> listeners = new ArrayList<>();
 
   private final ArrayDeque<Event> unaddressedEvents = new ArrayDeque<>();
+  private Long extraTime = 0L;
 
   public SpaceTalker(TextToSpeechClient textToSpeechClient, LLMClient llmClient, Path outputRootDirectory) {
     this.outputRootDirectory = outputRootDirectory;
@@ -107,21 +109,28 @@ public class SpaceTalker {
       latency = Math.max(commentary.generatedAudioDurationMs - period.getDuration(), 0);
     }
 
-    for (int i = 1; i < periods.size(); i++) {
+    ArrayDeque<Period> periodQueue = new ArrayDeque<>(periods);
+    periodQueue.removeFirst();
+
+    int i = 0;
+    Period firstPeriod = periods.getFirst();
+    while (!periodQueue.isEmpty()) {
+      i++;
       Period lastPeriod = period;
+      period = periodQueue.removeFirst();
       List<Event> secondaryEventsFromLastPeriod = lastPeriod.getSecondaryEvents();
-      period = periods.get(i);
       long latencyReduction = 0;
 
       if (latency > period.getDuration()) {
         // Next period has already begun, the commentator needs to move on.
         commentaryRepository.incrementIndex();
         unaddressedEvents.add(period.getEvent());
-        notifyPeriodIgnoredListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), latency);
+        notifyPeriodIgnoredListeners(i, period.getEvent().eventTimestamp - firstPeriod.getEvent().eventTimestamp, period.getDuration(), latency);
         latency -= period.getDuration();
         continue;
       }
 
+      Period originalPeriod = period;
       long inputLatency = latency;
       if (latency > LATENCY_THRESHOLD_MS && period.getDuration() > MEDIUM_PERIOD_THRESHOLD_MS) {
         // replace period with time debt adjusted one to reduce latency.
@@ -131,13 +140,13 @@ public class SpaceTalker {
         period = new Period(period.getEvent(), new ArrayList<>(period.getSecondaryEvents()), newPeriodDuration);
       }
 
-      notifyPeriodProcessingStartedListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), inputLatency);
+      notifyPeriodProcessingStartedListeners(i, period.getEvent().eventTimestamp - firstPeriod.getEvent().eventTimestamp, period.getDuration(), inputLatency);
 
       input = getEventInstructions(msToSeconds(lastPeriod.getDuration() + inputLatency), period, secondaryEventsFromLastPeriod, inputLatency);
 
-      Period nextPeriod = i + 1 < periods.size() ? periods.get(i + 1) : null;
-      long nextPeriodStartTime = nextPeriod != null ? nextPeriod.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp : Long.MAX_VALUE;
-      CommentaryContext context = new CommentaryContext(period, periods.get(i), i, input, latency, latencyReduction, nextPeriodStartTime);
+      Period nextPeriod = !periodQueue.isEmpty() ? periodQueue.getFirst() : null;
+      long nextPeriodRelativeStartTime = nextPeriod != null ? nextPeriod.getEvent().eventTimestamp - firstPeriod.getEvent().eventTimestamp : Long.MAX_VALUE;
+      CommentaryContext context = new CommentaryContext(period, originalPeriod, i, input, latency, latencyReduction, nextPeriodRelativeStartTime);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
 
@@ -156,17 +165,52 @@ public class SpaceTalker {
           commentary.shorteningAbandoned
       );
 
-      latency = (lastVoice.startTime() + lastVoice.voiceCutoffMs()) - nextPeriodStartTime;
-      if (i < periods.size() - 1 && latency < 0) {
+      latency = (lastVoice.startTime() + lastVoice.voiceCutoffMs()) - nextPeriodRelativeStartTime + extraTime;
+      if (!periodQueue.isEmpty() && latency + extraTime < 0) {
         throw new RuntimeException("Latency is negative, something is wrong: " + latency);
       }
       unaddressedEvents.clear();
       audioTrackBuilder.validateLastTimestampAfter(period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp);
+
+      if (extraTime > 0 && nextPeriod != null) {
+        long eventTimestamp = nextPeriod.getEvent().eventTimestamp - extraTime;
+        Event lastEvent = period.getLastEventBeforeTimestamp(eventTimestamp);
+        Event copy = new Event(lastEvent, lastEvent.getType());
+        copy.eventTimestamp = nextPeriod.getEvent().eventTimestamp - extraTime;
+        List<Event> secondaryEvents = period.getAndRemoveSecondaryEventsAfterTimestamp(copy.eventTimestamp);
+
+        periodQueue.addFirst(new Period(
+            copy,
+            secondaryEvents,
+            extraTime
+        ));
+
+        this.extraTime = 0L;
+
+        notifyExtraPeriodAddedListeners(extraTime, i + 1, copy.eventTimestamp - firstPeriod.getEvent().eventTimestamp);
+      }
     }
 
     Path finalSoundFile = commentaryRepository.soundOutputDir.resolve(OUTPUT_SOUND_FILE_NAME + OUTPUT_SOUND_FILE_SUFFIX);
     var voices = audioTrackBuilder.produce(finalSoundFile);
     return new SpaceTalk(finalSoundFile, voices);
+  }
+
+  private void notifyExtraPeriodAddedListeners(long duration, int periodIndex, long periodRelativeStartTime) {
+    long time = System.currentTimeMillis();
+    listeners.forEach((s) -> {
+      s.onExtraPeriodAdded(new ExtraPeriodAddedEvent(duration, periodIndex, periodRelativeStartTime, time));
+    });
+  }
+
+  private List<Event> getSecondaryEventsUpToCurrentTime(List<Event> secondaryEvents, long eventTimestamp) {
+    List<Event> result = new ArrayList<>();
+    for (Event event : secondaryEvents) {
+      if (event.eventTimestamp < eventTimestamp) {
+        result.add(event);
+      }
+    }
+    return result;
   }
 
   private static Long msToSeconds(Long duration) {
@@ -388,6 +432,12 @@ public class SpaceTalker {
         if (unallocated > 0 && cutoff > timeUntilNextPeriod) {
           // Prevent adding silence, when there is no time for it.
           cutoff -= Math.min(unallocated, cutoff - timeUntilNextPeriod);
+        }
+
+        long extraTime = Math.min(timeUntilNextPeriod, cutoff) - duration;
+        if (context.periodIndex > 0 && context.nextPeriodRelativeStartTime != Long.MAX_VALUE && extraTime > 3000) {
+          SpaceTalker.this.extraTime = extraTime;
+          cutoff = duration;
         }
 
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,

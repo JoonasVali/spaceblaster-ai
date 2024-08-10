@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker.llm;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
@@ -75,6 +76,11 @@ public class OpenAIClient extends BaseLLMClient {
 
       @Override
       public void onIgnorePeriod(PeriodIgnoredEvent event) {
+        // Nothing
+      }
+
+      @Override
+      public void onExtraPeriodAdded(ExtraPeriodAddedEvent event) {
         // Nothing
       }
     };

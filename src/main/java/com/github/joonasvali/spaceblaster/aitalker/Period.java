@@ -46,4 +46,19 @@ public class Period {
   public List<Event> getSecondaryEvents() {
     return secondaryEvents;
   }
+
+  public Event getLastEventBeforeTimestamp(long timestamp) {
+    return secondaryEvents.stream()
+        .filter(event -> event.getEventTimestamp() < timestamp)
+        .reduce((first, second) -> second)
+        .orElse(event);
+  }
+
+  public List<Event> getAndRemoveSecondaryEventsAfterTimestamp(long timestamp) {
+    List<Event> removedEvents = secondaryEvents.stream()
+        .filter(event -> event.getEventTimestamp() > timestamp)
+        .toList();
+    secondaryEvents.removeIf(event -> event.getEventTimestamp() > timestamp);
+    return removedEvents;
+  }
 }

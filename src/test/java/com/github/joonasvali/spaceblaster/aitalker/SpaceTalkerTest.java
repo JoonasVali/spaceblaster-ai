@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
@@ -32,8 +33,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -57,6 +60,7 @@ public class SpaceTalkerTest {
     AtomicInteger ignoredPeriods = new AtomicInteger(0);
     AtomicBoolean lastPeriodEndedWithSilence =  new AtomicBoolean(false);
     AtomicLong lastAudioTimestampPointer = new AtomicLong(0);
+    Set<Integer> extraPeriodIds = new HashSet<>();
 
     spaceTalker.addListener(new SpaceTalkListener() {
 
@@ -130,6 +134,12 @@ public class SpaceTalkerTest {
         ignoredPeriods.incrementAndGet();
         lastPeriodEndedWithSilence.set(false);
       }
+
+      @Override
+      public void onExtraPeriodAdded(ExtraPeriodAddedEvent event) {
+        System.out.println("Extra period added (" + event.periodIndex() + ") at " + event.periodRelativeStartTime());
+        extraPeriodIds.add(event.periodIndex());
+      }
     });
 
 
@@ -147,9 +157,15 @@ public class SpaceTalkerTest {
     List<AudioTrackBuilder.TimedVoice> voices = talk.voices();
 
     long firstPeriodTimestamp = periods.getFirst().getEvent().eventTimestamp;
+
+    int p = 0;
     for (int i = 0; i < voices.size(); i++) {
+      if (extraPeriodIds.contains(i)) {
+        p++;
+        continue;
+      }
       AudioTrackBuilder.TimedVoice voice = voices.get(i);
-      Period period = periods.get(i);
+      Period period = periods.get(i - p);
       long relativeTimestamp = period.getEvent().eventTimestamp - firstPeriodTimestamp;
 
       if (voice.startTime() < relativeTimestamp) {
@@ -158,14 +174,10 @@ public class SpaceTalkerTest {
     }
 
     long firstEventTimestamp = events.getFirst().eventTimestamp;
-    Assertions.assertEquals(voices.size(), periods.size() - ignoredPeriods.get());
+    Assertions.assertEquals(periods.size() - ignoredPeriods.get() + extraPeriodIds.size(), voices.size());
 
     long lastVoiceStartTimeTimestamp = 0;
     for (int i = 0; i < voices.size(); i++) {
-      AudioTrackBuilder.TimedVoice voice = voices.get(i);
-      long periodStart = periods.get(i).getEvent().eventTimestamp - firstEventTimestamp;
-      Assertions.assertTrue(voice.startTime() >= periodStart, "Voice start time " + voice.startTime() + " is before period start " + periodStart);
-
       long currentVoiceStartTimestamp = voices.get(i).startTime();
       if (currentVoiceStartTimestamp < lastVoiceStartTimeTimestamp) {
         throw new RuntimeException("Voice start time is before previous voice start time: " + i + " " + currentVoiceStartTimestamp + " " + lastVoiceStartTimeTimestamp);

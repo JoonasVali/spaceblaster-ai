@@ -11,4 +11,6 @@ public interface SpaceTalkListener {
   void onAbandonShortenSpeech(AbandonShortenSpeechEvent event);
 
   void onIgnorePeriod(PeriodIgnoredEvent event);
+
+  void onExtraPeriodAdded(ExtraPeriodAddedEvent event);
 }

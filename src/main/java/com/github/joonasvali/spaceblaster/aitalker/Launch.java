@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
@@ -118,6 +119,11 @@ public class Launch {
       @Override
       public void onIgnorePeriod(PeriodIgnoredEvent event) {
         logger.info(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
+      }
+
+      @Override
+      public void onExtraPeriodAdded(ExtraPeriodAddedEvent event) {
+        logger.info("Extra period added: " + event.periodIndex() + " at " + event.periodRelativeStartTime() + " for " + event.periodDuration() + " ms");
       }
     });
 
