@@ -8,7 +8,6 @@ import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStarted
 import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.BaseLLMClient;
-import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Text;
 import com.github.joonasvali.spaceblaster.aitalker.sound.AudioTrackBuilder;
@@ -29,17 +28,16 @@ import javax.sound.sampled.AudioSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SpaceTalkerTest {
   @TempDir
@@ -58,6 +56,8 @@ public class SpaceTalkerTest {
     SpaceTalker spaceTalker = new SpaceTalker(speech, llmClient, tempDir);
     AtomicInteger ignoredPeriods = new AtomicInteger(0);
     AtomicBoolean lastPeriodEndedWithSilence =  new AtomicBoolean(false);
+    AtomicLong lastAudioTimestampPointer = new AtomicLong(0);
+
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
@@ -81,8 +81,14 @@ public class SpaceTalkerTest {
           throw new RuntimeException("There is a latency, but last period ended with silence, this should never happen. " + event.periodIndex());
         }
 
-        if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
-          silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+        if (lastAudioTimestampPointer.get() != event.generatedAudioRelativeStartTime() && event.periodIndex() > 0) {
+          throw new RuntimeException("Audio time is not continuous " + lastAudioTimestampPointer.get() + " -> " + event.generatedAudioRelativeStartTime());
+        }
+        lastAudioTimestampPointer.set(event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs());
+
+        if (event.silenceDuration() > 0) {
+          silence = "Silence: " + audioEnd + " -> " + (audioEnd + event.silenceDuration()) + " (" + event.silenceDuration() + "ms) ";
+          lastAudioTimestampPointer.set(lastAudioTimestampPointer.get() + event.silenceDuration());
           lastPeriodEndedWithSilence.set(true);
         } else {
           lastPeriodEndedWithSilence.set(false);

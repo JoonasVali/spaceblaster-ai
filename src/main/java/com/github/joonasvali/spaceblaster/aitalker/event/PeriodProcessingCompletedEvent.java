@@ -10,6 +10,7 @@ public record PeriodProcessingCompletedEvent(
     int periodIndex,
     long inputLatency,
     int retryAttempts,
+    long silenceDuration,
     boolean shorteningAbandoned,
     long eventTime
 ) {}

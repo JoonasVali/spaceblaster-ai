@@ -88,13 +88,17 @@ public class SpaceTalker {
 
       commentaryRepository = new VoiceCommentaryRepository(period.getEvent().eventTimestamp, projectName);
 
-      CommentaryContext context = new CommentaryContext(period, 0, input, 0);
+      Period nextPeriod = periods.size() > 1 ? periods.get(1) : null;
+      long nextPeriodStartTime = nextPeriod != null ? nextPeriod.getEvent().eventTimestamp - firstEvent.eventTimestamp : Long.MAX_VALUE;
+
+      CommentaryContext context = new CommentaryContext(period, 0, input, 0, nextPeriodStartTime);
       notifyPeriodProcessingStartedListeners(0, 0, period.getDuration(), 0);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
       notifyPeriodCompletedListeners(commentary.text, commentary.input, 0, commentary.generatedAudioDurationMs, 0,
           // since this is the first period, the silence is added to the start of the track.
           Math.max(0, commentary.generatedAudioRelativeStartTime + period.getDuration() - commentary.generatedAudioDurationMs),
+          Math.max(0, commentary.generatedAudioDurationMs - period.getDuration()),
           period.getDuration(),
           0,
           commentary.retryAttempts,
@@ -110,7 +114,7 @@ public class SpaceTalker {
       long latencyReduction = 0;
 
       if (latency > period.getDuration()) {
-        // Next period has already began, the commentator needs to move on.
+        // Next period has already begun, the commentator needs to move on.
         latency -= period.getDuration();
         commentaryRepository.incrementIndex();
         unaddressedEvents.add(period.getEvent());
@@ -118,37 +122,45 @@ public class SpaceTalker {
         continue;
       }
 
+      long inputLatency = latency;
       if (latency > LATENCY_THRESHOLD_MS && period.getDuration() > MEDIUM_PERIOD_THRESHOLD_MS) {
         // replace period with time debt adjusted one to reduce latency.
         latencyReduction = Math.min(period.getDuration() / 2, latency);
+        latency -= latencyReduction;
         long newPeriodDuration = period.getDuration() - latencyReduction;
         period = new Period(period.getEvent(), new ArrayList<>(period.getSecondaryEvents()), newPeriodDuration);
       }
 
-      notifyPeriodProcessingStartedListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), latency);
+      notifyPeriodProcessingStartedListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), inputLatency);
 
-      input = getEventInstructions(msToSeconds(lastPeriod.getDuration() + latency), period, secondaryEventsFromLastPeriod, latency);
+      input = getEventInstructions(msToSeconds(lastPeriod.getDuration() + inputLatency), period, secondaryEventsFromLastPeriod, inputLatency);
 
-      CommentaryContext context = new CommentaryContext(period, periods.get(i), i, input, latency, latencyReduction);
+      Period nextPeriod = i + 1 < periods.size() ? periods.get(i + 1) : null;
+      long nextPeriodStartTime = nextPeriod != null ? nextPeriod.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp : Long.MAX_VALUE;
+      CommentaryContext context = new CommentaryContext(period, periods.get(i), i, input, latency, latencyReduction, nextPeriodStartTime);
       Commentary commentary = produceCommentary(commentaryRepository, context);
       llmClient.commitHistoryBySquashing();
 
+      AudioTrackBuilder.TimedVoice lastVoice = audioTrackBuilder.getLastVoice();
       notifyPeriodCompletedListeners(
           commentary.text,
           commentary.input,
           i,
-          commentary.generatedAudioDurationMs,
+          lastVoice.voiceDuration(),
           period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp,
-          commentary.generatedAudioRelativeStartTime,
+          lastVoice.startTime(),
+          Math.max(0, lastVoice.voiceCutoffMs() - lastVoice.voiceDuration()),
           period.getDuration(),
-          latency,
+          inputLatency,
           commentary.retryAttempts,
           commentary.shorteningAbandoned
       );
 
+      latency = (lastVoice.startTime() + lastVoice.voiceCutoffMs()) - nextPeriodStartTime;
+      if (i < periods.size() - 1 && latency < 0) {
+        throw new RuntimeException("Latency is negative, something is wrong: " + latency);
+      }
       unaddressedEvents.clear();
-      latency = Math.max(latency - latencyReduction + commentary.generatedAudioDurationMs - period.getDuration(), 0);
-
       audioTrackBuilder.validateLastTimestampAfter(period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp);
     }
 
@@ -177,15 +189,16 @@ public class SpaceTalker {
     long evaluatedDuration = soundDurationEvaluator.evaluateDurationInMs(response.outputMessage());
 
     Period period = context.period;
-    long latency = context.latency;
 
     String lastOutputMessage = response.outputMessage();
     long eventTimeStamp = period.getEvent().getEventTimestamp();
     long limitDuration = Math.max(period.getDuration(), EventDigester.MIN_PERIOD);
 
+    long speechStartTime = eventTimeStamp + context.latency + context.latencyReduction;
+
     long audioFileDuration = 0;
     if (context.isAcceptableDuration(evaluatedDuration, limitDuration)) {
-      audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, eventTimeStamp + latency, false);
+      audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, false);
     }
 
     int failsToShorten = 0;
@@ -193,11 +206,11 @@ public class SpaceTalker {
 
     while (failsToShorten < SHORTENING_FAILURES_ALLOWED && (!context.isAcceptableDuration(evaluatedDuration, limitDuration) || !context.isAcceptableDuration(audioFileDuration, limitDuration))) {
       retries++;
-      notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten, context.periodIndex, eventTimeStamp, period.getDuration(), latency);
+      notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten, context.periodIndex, eventTimeStamp, period.getDuration(), context.latency + context.latencyReduction);
       context.addRejectedCommentary(lastOutputMessage, evaluatedDuration, audioFileDuration);
 
       Response anotherResponse;
-      if (failsToShorten >= SHORTENING_RESOLUTE_THRESHOLD) {
+      if (failsToShorten == SHORTENING_RESOLUTE_THRESHOLD) {
         notifyResoluteShorteningMessage(context.periodIndex, lastOutputMessage, evaluatedDuration, limitDuration, failsToShorten);
         anotherResponse = llmClient.run(new Text(RESOLUTE_SHORTER_MESSAGE_INSTRUCTION, ""));
       } else {
@@ -210,7 +223,7 @@ public class SpaceTalker {
       boolean exceedsEvaluatedDuration = !context.isAcceptableDuration(evaluatedDuration, limitDuration);
 
       if (!exceedsEvaluatedDuration) {
-        audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, eventTimeStamp + latency, false);
+        audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, false);
       }
 
       if (exceedsEvaluatedDuration || !context.isAcceptableDuration(audioFileDuration, Math.max(period.getDuration(), EventDigester.MIN_PERIOD))) {
@@ -220,7 +233,7 @@ public class SpaceTalker {
 
     if (failsToShorten >= SHORTENING_FAILURES_ALLOWED) {
       notifyAbandonShortenSpeechListeners(context.periodIndex, lastOutputMessage, failsToShorten);
-      var result = commentaryRepository.addSound(lastOutputMessage, eventTimeStamp + latency, period.getDuration(), false);
+      var result = commentaryRepository.addSound(lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, period.getDuration(), false);
       audioFileDuration = result.soundDurationInTrack;
     }
 
@@ -264,6 +277,7 @@ public class SpaceTalker {
       long generatedAudioDurationMs,
       long periodRelativeStartTime,
       long generatedAudioRelativeStartTime,
+      long silenceDuration,
       long periodDuration,
       long inputLatency,
       int retryAttempts,
@@ -280,6 +294,7 @@ public class SpaceTalker {
         periodIndex,
         inputLatency,
         retryAttempts,
+        silenceDuration,
         shorteningAbandoned,
         time
     );
@@ -359,14 +374,22 @@ public class SpaceTalker {
       }
     }
 
-    public Long addSoundConditionally(CommentaryContext context, String text, Long speechStartTime, boolean forceCutoff) throws IOException {
+    public Long addSoundConditionally(CommentaryContext context, String text, Long speechStartTime, long nextPeriodRelativeStartTime, boolean forceCutoff) throws IOException {
       long periodDuration = context.period.getDuration();
       long relativeTimestamp = speechStartTime - startTime;
+      long timeUntilNextPeriod = nextPeriodRelativeStartTime - relativeTimestamp;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
       TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
       if (context.isAcceptableDuration(duration, Math.max(periodDuration, EventDigester.MIN_PERIOD))) {
         long cutoff = forceCutoff ? Math.max(periodDuration, EventDigester.MIN_PERIOD) : Math.max(periodDuration, duration);
+
+        long unallocated = Math.max(0, cutoff - duration);
+        if (unallocated > 0 && cutoff > timeUntilNextPeriod) {
+          // Prevent adding silence, when there is no time for it.
+          cutoff -= Math.min(unallocated, cutoff - timeUntilNextPeriod);
+        }
+
         audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
             cutoff,
             outputFile
@@ -380,12 +403,17 @@ public class SpaceTalker {
       return duration;
     }
 
-    public AddSoundResult addSound(String text, Long speechStartTime, long periodDuration, boolean forceCutoff) throws IOException {
+    public AddSoundResult addSound(String text, Long speechStartTime, long nextPeriodRelativeStartTime, long periodDuration, boolean forceCutoff) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
       TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
       long duration = response.durationMs();
       long cutoff = forceCutoff ? Math.max(periodDuration, EventDigester.MIN_PERIOD) : Math.max(periodDuration, duration);
+      long unallocated = Math.max(0, cutoff - duration);
+      if (unallocated > 0 && relativeTimestamp + cutoff > nextPeriodRelativeStartTime) {
+        cutoff -= Math.min(unallocated, relativeTimestamp + cutoff - nextPeriodRelativeStartTime);
+      }
+
       audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
           cutoff,
           outputFile);
@@ -504,6 +532,8 @@ public class SpaceTalker {
   private static class CommentaryContext {
     private final Period period;
     private final Period originalPeriod;
+
+    private final long nextPeriodRelativeStartTime;
     private final Text instructions;
     private final long latency;
 
@@ -520,22 +550,24 @@ public class SpaceTalker {
       return duration <= limitDuration;
     }
 
-    public CommentaryContext(Period period, int periodIndex, Text instructions, long latency) {
+    public CommentaryContext(Period period, int periodIndex, Text instructions, long latency, long nextPeriodRelativeStartTime) {
       this.period = period;
       this.instructions = instructions;
       this.latency = latency;
       this.periodIndex = periodIndex;
       this.originalPeriod = period;
       this.latencyReduction = 0;
+      this.nextPeriodRelativeStartTime = nextPeriodRelativeStartTime;
     }
 
-    public CommentaryContext(Period period, Period originalPeriod, int periodIndex, Text instructions, long latency, long latencyReduction) {
+    public CommentaryContext(Period period, Period originalPeriod, int periodIndex, Text instructions, long latency, long latencyReduction, long nextPeriodRelativeStartTime) {
       this.period = period;
       this.originalPeriod = originalPeriod;
       this.instructions = instructions;
       this.latency = latency;
       this.periodIndex = periodIndex;
       this.latencyReduction = latencyReduction;
+      this.nextPeriodRelativeStartTime = nextPeriodRelativeStartTime;
     }
 
     public void addRejectedCommentary(String value, Long estimatedSoundDuration, Long soundDuration) {

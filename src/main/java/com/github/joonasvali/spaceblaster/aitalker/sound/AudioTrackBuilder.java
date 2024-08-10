@@ -75,6 +75,10 @@ public class AudioTrackBuilder {
     return voices.getLast().startTime;
   }
 
+  public TimedVoice getLastVoice() {
+    return voices.getLast();
+  }
+
 
   public record TimedVoice(String text, long startTime, long voiceDuration, long voiceCutoffMs, Path soundFile) {
   }

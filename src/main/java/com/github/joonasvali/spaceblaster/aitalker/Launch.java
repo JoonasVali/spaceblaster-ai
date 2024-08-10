@@ -82,9 +82,10 @@ public class Launch {
       public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
         long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
         String silence = "";
-        if (audioEnd < event.periodRelativeStartTime() + event.periodDuration()) {
+
+        if (event.silenceDuration() > 0) {
           if (event.periodIndex() != 0) {
-            silence = "Silence: " + audioEnd + " -> " + (event.periodRelativeStartTime() + event.periodDuration()) + " (" + (event.periodRelativeStartTime() + event.periodDuration() - audioEnd) + "ms) ";
+            silence = "Silence: " + audioEnd + " -> " + (audioEnd + event.silenceDuration()) + " (" + event.silenceDuration() + "ms) ";
           }
         }
 
