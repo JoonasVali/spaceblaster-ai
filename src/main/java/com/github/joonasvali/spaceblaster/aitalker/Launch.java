@@ -1,9 +1,18 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsFinVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamRoastVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMimiVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMp3Output;
@@ -30,12 +39,12 @@ public class Launch {
   /**
    * Path to the root directory where the sound files and final output will be saved. Change as needed.
    */
-  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\2";
+  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "\\ Output directory here \\";
 
   /**
    * Path to the event data file. Change as needed.
    */
-  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\2\\events-1720370808682.yml";
+  public static final String EVENT_DATA_PATH = "\\ Event data file here \\";
   public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamVoiceSettings();
 
   public static void main(String[] args) throws IOException {
@@ -53,6 +62,7 @@ public class Launch {
       Period period = eventDigester.getNextPeriod();
       periods.add(period);
     }
+    logger.info("Preparing " + periods.size() + " periods (can still vary during processing).");
 
     TextToSpeechClient textToSpeechClient = new ElevenLabsClient(VOICE_SETTINGS, new ElevenLabsMp3Output());
 
@@ -63,29 +73,60 @@ public class Launch {
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
-      public void onCommentaryFailed(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.info("Commentary failed (" + attempt + "): " + lastOutputMessage);
+      public void onCommentaryFailed(CommentaryFailedEvent event) {
+        logger.debug("Failed to generate commentary. (" + event.attempt() + ")");
       }
 
       @Override
-      public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        logger.info("Failed to shorten speech. (" + attempt + ")");
-        logger.info("  speech: " + lastOutputMessage);
+      public void onPeriodProcessingStarted(PeriodProcessingStartedEvent event) {
+
       }
 
       @Override
-      public void onPeriodProcessingCompleted(String result, int periodIndex, long timeSinceEventMs) {
-        logger.info("Period " + periodIndex + " completed: " + result);
+      public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
+        long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
+        String silence = "";
+
+        if (event.silenceDuration() > 0) {
+          if (event.periodIndex() != 0) {
+            silence = "Silence: " + audioEnd + " -> " + (audioEnd + event.silenceDuration()) + " (" + event.silenceDuration() + "ms) ";
+          }
+        }
+
+        logger.info(
+            event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
+                (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
+                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
+            " Audio: " + event.generatedAudioDurationMs() + "ms, playtime: " + event.generatedAudioRelativeStartTime() + " -> " + (event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs()) + ". " +
+                (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
+                silence +
+                "Result \"" + event.result() + "\""
+            );
+
+
+        if (logger.isDebugEnabled()) {
+          logger.debug("Prompt: " + event.inputText());
+        }
       }
 
       @Override
-      public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
-        logger.info("Trying resolutely force a shorter message. (" + attempt + ")");
+      public void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event) {
+        logger.debug("Trying resolutely force a shorter message. (" + event.attempt() + ")");
       }
 
       @Override
-      public void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs) {
-        logger.info("Abandoning shortening speech. (" + attempt + ")");
+      public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
+        logger.debug("Abandoning shortening speech. (" + event + ")");
+      }
+
+      @Override
+      public void onIgnorePeriod(PeriodIgnoredEvent event) {
+        logger.info(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
+      }
+
+      @Override
+      public void onExtraPeriodAdded(ExtraPeriodAddedEvent event) {
+        logger.info("Extra period added: " + event.periodIndex() + " at " + event.periodRelativeStartTime() + " for " + event.periodDuration() + " ms");
       }
     });
 

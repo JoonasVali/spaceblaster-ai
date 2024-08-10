@@ -7,8 +7,10 @@ import com.github.joonasvali.spaceblaster.event.MovingDirection;
 public class EventSerializer {
   public static String serialize(Event event) {
     StringBuilder strb = new StringBuilder();
-    strb.append("\nGame difficulty is ").append(event.gameDifficulty).append(".");
-    strb.append("\n");
+    if (event.type == EventType.START_GAME) {
+      strb.append("\nGame difficulty is ").append(event.gameDifficulty).append(".");
+      strb.append("\n");
+    }
     if (event.enemiesStartedWithCannonCount > 0) {
       strb.append("Enemies started with cannon count: ").append(event.enemiesStartedWithCannonCount);
       strb.append("\n");
@@ -66,10 +68,12 @@ public class EventSerializer {
     }
     strb.append("Player has ").append(event.playerLivesLeft).append(" of ").append(event.playerLivesOriginal).append(" lives left.");
     strb.append("\n");
-    strb.append("Player has collected ").append(event.powerUpsCollectedThisRoundCount).append(" power-ups this round.");
-    strb.append("\n");
+    if (event.powerUpsCollectedThisRoundCount > 0) {
+      strb.append("Player has collected ").append(event.powerUpsCollectedThisRoundCount).append(" power-ups this round.");
+      strb.append("\n");
+    }
     if (event.powerUpsMissedCount > 0) {
-      strb.append("Player has missed ").append(event.powerUpsMissedCount).append(" power-ups this round.");
+      strb.append("Player has missed ").append(event.powerUpsMissedCount).append(" power-ups in total.");
       strb.append("\n");
     }
     strb.append("Player has collected a total of ").append(event.powerUpsCollectedTotalCount).append(" power-ups.");
@@ -95,8 +99,6 @@ public class EventSerializer {
     strb.append("Player is wielding a weapon: ").append(event.playerWeapon).append(".");
     strb.append("\n");
     if (!event.playerDead) {
-      strb.append("Is Player moving: ").append(event.playerIsMoving).append(".");
-      strb.append("\n");
       if (!event.inBetweenRounds) {
         strb.append("Is Player invincible: ").append(event.playerInvincible).append(".");
         strb.append("\n");
@@ -108,12 +110,20 @@ public class EventSerializer {
     if (!event.inBetweenRounds) {
       strb.append("Is Player directly under an enemy formation: ").append(event.playerIsUnderEnemyFormation).append(".");
       strb.append("\n");
+
+      if (event.playerIsUnderEnemyFormation || event.enemyBulletFlyingTowardsPlayerDistance != null) {
+        strb.append("Is Player currently in motion: ").append(event.playerIsMoving).append(".");
+        strb.append("\n");
+      }
     }
 
-    strb.append("Is Player victorious: ").append(event.isVictory).append(".");
-    strb.append("\n");
-    strb.append("Is Player defeated: ").append(event.isDefeat).append(".");
-    strb.append("\n");
+    if (event.isVictory) {
+      strb.append("Is Player victorious: ").append("YES, VICTORY! THE GAME IS OVER. PLAYER HAS WON AND DEFEATED ALL ROUNDS.").append(".");
+      strb.append("\n");
+    } else {
+      strb.append("Is Player defeated: ").append(event.isDefeat).append(".");
+      strb.append("\n");
+    }
     if (event.lastDeathTimestamp != null) {
       strb.append("Player last died ").append(msToSeconds(event.eventTimestamp - event.lastDeathTimestamp)).append(" seconds ago.");
       strb.append("\n");

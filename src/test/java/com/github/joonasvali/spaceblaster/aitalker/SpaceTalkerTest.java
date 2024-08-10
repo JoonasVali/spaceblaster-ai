@@ -1,7 +1,14 @@
 package com.github.joonasvali.spaceblaster.aitalker;
 
+import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodIgnoredEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingCompletedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
+import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.BaseLLMClient;
-import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Text;
 import com.github.joonasvali.spaceblaster.aitalker.sound.AudioTrackBuilder;
@@ -22,52 +29,116 @@ import javax.sound.sampled.AudioSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SpaceTalkerTest {
   @TempDir
   public static Path tempDir;
 
-  public void runTest(String eventFilePath, List<String> llmAnswers, List<TestTextToSpeechClient.Entry> ttsAnswers, String expectedOutput, long finalDurationMs) throws IOException {
+  private interface TestController {
+    long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt);
+    long getSoundRealDuration(int periodIndex, long periodDuration, int attempt);
+  }
+  private void runTest(String eventFilePath, TestController testController) throws IOException {
     List<Event> events = getEvents(eventFilePath);
 
-    List<String> answers = new ArrayList<>(llmAnswers);
-
     TestTextToSpeechClient speech = new TestTextToSpeechClient();
-    speech.setAnswers(ttsAnswers);
+    TestLLMClient llmClient = new TestLLMClient();
 
-    LLMClient llmClient = new TestLLMClient(answers);
     SpaceTalker spaceTalker = new SpaceTalker(speech, llmClient, tempDir);
+    AtomicInteger ignoredPeriods = new AtomicInteger(0);
+    AtomicBoolean lastPeriodEndedWithSilence =  new AtomicBoolean(false);
+    AtomicLong lastAudioTimestampPointer = new AtomicLong(0);
+    Set<Integer> extraPeriodIds = new HashSet<>();
+
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
-      public void onCommentaryFailed(String lastOutputMessage, int attempt, long timeSinceEventMs) {
-        speech.nextAnswer();
+      public void onCommentaryFailed(CommentaryFailedEvent event) {
+        llmClient.setAnswer(event.periodIndex(), event.periodDuration());
+        speech.setAnswer(event.periodIndex(), testController.getSoundEvaluatedDuration(event.periodIndex(), event.periodDuration(), event.attempt() + 1), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), event.attempt() + 1));
       }
 
       @Override
-      public void onFailToShortenSpeech(String lastOutputMessage, int attempt, long timeSinceEventMs) {
+      public void onPeriodProcessingStarted(PeriodProcessingStartedEvent event) {
+        llmClient.setAnswer(event.periodIndex(), event.periodDuration());
+        speech.setAnswer(event.periodIndex(), testController.getSoundEvaluatedDuration(event.periodIndex(), event.periodDuration(), 0), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), 0));
       }
 
       @Override
-      public void onPeriodProcessingCompleted(String result, int periodIndex, long timeSinceEventMs) {
-        speech.nextAnswer();
+      public void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event) {
+        long audioEnd = event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs();
+        String silence = "";
+
+        if (lastPeriodEndedWithSilence.get() && event.inputLatency() > 0) {
+          throw new RuntimeException("There is a latency, but last period ended with silence, this should never happen. " + event.periodIndex());
+        }
+
+        if (lastAudioTimestampPointer.get() != event.generatedAudioRelativeStartTime() && event.periodIndex() > 0) {
+          throw new RuntimeException("Audio time is not continuous " + lastAudioTimestampPointer.get() + " -> " + event.generatedAudioRelativeStartTime());
+        }
+        lastAudioTimestampPointer.set(event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs());
+
+        if (event.silenceDuration() > 0) {
+          silence = "Silence: " + audioEnd + " -> " + (audioEnd + event.silenceDuration()) + " (" + event.silenceDuration() + "ms) ";
+          lastAudioTimestampPointer.set(lastAudioTimestampPointer.get() + event.silenceDuration());
+          lastPeriodEndedWithSilence.set(true);
+        } else {
+          lastPeriodEndedWithSilence.set(false);
+        }
+
+        System.out.println(
+            event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
+                (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
+                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
+                " Audio: " + event.generatedAudioDurationMs() + "ms, playtime: " + event.generatedAudioRelativeStartTime() + " -> " + (event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs()) + ". " +
+                (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
+                silence +
+                "Result \"" + event.result() + "\""
+        );
+
+        if (event.generatedAudioRelativeStartTime() < event.periodRelativeStartTime()) {
+          throw new RuntimeException("Audio start time is before period start time");
+        }
+
+        if (event.inputLatency() > 5000) {
+          // This is a very high latency, it should be avoided.
+          throw new RuntimeException("Latency is too high");
+        }
       }
 
       @Override
-      public void onResoluteShorteningMessage(String result, long duration, long limitDuration, int attempt, long timeSinceEventMs) {
+      public void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event) {
 
       }
 
       @Override
-      public void onAbandonShortenSpeech(String output, int attempt, long timeSinceEventMs) {
+      public void onAbandonShortenSpeech(AbandonShortenSpeechEvent event) {
 
+      }
+
+      @Override
+      public void onIgnorePeriod(PeriodIgnoredEvent event) {
+        System.out.println(event.periodIndex() + ": Ignoring period " + event.periodIndex() + " at " + event.periodRelativeStartTime());
+        ignoredPeriods.incrementAndGet();
+        lastPeriodEndedWithSilence.set(false);
+      }
+
+      @Override
+      public void onExtraPeriodAdded(ExtraPeriodAddedEvent event) {
+        System.out.println("Extra period added (" + event.periodIndex() + ") at " + event.periodRelativeStartTime());
+        extraPeriodIds.add(event.periodIndex());
       }
     });
 
@@ -83,117 +154,177 @@ public class SpaceTalkerTest {
     String projectName = "myproject";
 
     SpaceTalker.SpaceTalk talk = spaceTalker.run(periods, "Player one", projectName);
-    List<AudioTrackBuilder.TimedVoice> list = talk.voices();
+    List<AudioTrackBuilder.TimedVoice> voices = talk.voices();
 
-    StringBuilder strb = new StringBuilder();
-    list.forEach(timedVoice -> {
-      strb.append(timedVoice.startTime()).append(" ");
-      strb.append(timedVoice.voiceDuration()).append(" ");
-      strb.append(timedVoice.voiceCutoffMs()).append(" ");
-      strb.append(timedVoice.text()).append(" ");
-      strb.append(timedVoice.soundFile()).append("\n");
-    });
+    long firstPeriodTimestamp = periods.getFirst().getEvent().eventTimestamp;
 
-    long firstEventTimestamp = events.get(0).eventTimestamp;
-    Assertions.assertEquals(list.size(), periods.size());
-    for (int i = 0; i < list.size(); i++) {
-      AudioTrackBuilder.TimedVoice voice = list.get(i);
-      long periodStart = periods.get(i).getEvent().eventTimestamp - firstEventTimestamp;
-      Assertions.assertTrue(voice.startTime() >= periodStart, "Voice start time " + voice.startTime() + " is before period start " + periodStart);
+    int p = 0;
+    for (int i = 0; i < voices.size(); i++) {
+      if (extraPeriodIds.contains(i)) {
+        p++;
+        continue;
+      }
+      AudioTrackBuilder.TimedVoice voice = voices.get(i);
+      Period period = periods.get(i - p);
+      long relativeTimestamp = period.getEvent().eventTimestamp - firstPeriodTimestamp;
+
+      if (voice.startTime() < relativeTimestamp) {
+        throw new RuntimeException("Voice start time is before period start time: " + i + " " + relativeTimestamp + " " + voice.startTime());
+      }
     }
 
-    Path outputFile = tempDir.resolve(projectName);
-    Assertions.assertEquals(expectedOutput.replace("${PROJECT_DIR}", outputFile.toAbsolutePath().toString()), strb.toString());
+    long firstEventTimestamp = events.getFirst().eventTimestamp;
+    Assertions.assertEquals(periods.size() - ignoredPeriods.get() + extraPeriodIds.size(), voices.size());
 
-    Assertions.assertEquals(finalDurationMs, WavDuration.getDuration(talk.soundFile()));
+    long lastVoiceStartTimeTimestamp = 0;
+    for (int i = 0; i < voices.size(); i++) {
+      long currentVoiceStartTimestamp = voices.get(i).startTime();
+      if (currentVoiceStartTimestamp < lastVoiceStartTimeTimestamp) {
+        throw new RuntimeException("Voice start time is before previous voice start time: " + i + " " + currentVoiceStartTimestamp + " " + lastVoiceStartTimeTimestamp);
+      }
+      lastVoiceStartTimeTimestamp = currentVoiceStartTimestamp;
+    }
 
+    long lastPeriodTimestamp = periods.getLast().getEvent().eventTimestamp - firstEventTimestamp;
+
+    long finalSoundFileDuration = WavDuration.getDuration(talk.soundFile());
+    Assertions.assertTrue(finalSoundFileDuration > lastPeriodTimestamp + EventDigester.MIN_PERIOD, "The final sound file is shorter (" + finalSoundFileDuration + " ms) than last period timestamp + " + EventDigester.MIN_PERIOD);
   }
 
   @Test
-  public void testSpaceTalk1() throws IOException, URISyntaxException {
+  public void testSpaceTalkRetryWithEvaluatedDurationFailOnly() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2 && attempt < 3) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
 
-    List<String> llmAnswers = new ArrayList<>();
-    for (int i = 0; i < 5; i++) {
-      llmAnswers.add("LLM answer " + i);
-    }
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+    };
 
-    List<TestTextToSpeechClient.Entry> ttsAnswers = List.of(
-        new TestTextToSpeechClient.Entry(20000, 20000),
-        new TestTextToSpeechClient.Entry(4095, 4095),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(4000, 4000),
-        new TestTextToSpeechClient.Entry(15000, 15000)
-    );
+    runTest("./short-run/short-run.yml", testController);
+  }
 
-    String expected = """
-        0 20000 23899 LLM answer 0 ${PROJECT_DIR}\\0 - 0.wav
-        23899 4095 4095 LLM answer 1 ${PROJECT_DIR}\\1 - 23899.wav
-        27994 3000 5604 LLM answer 2 ${PROJECT_DIR}\\2 - 27994.wav
-        33598 4000 5665 LLM answer 3 ${PROJECT_DIR}\\3 - 33598.wav
-        39263 15000 20000 LLM answer 4 ${PROJECT_DIR}\\4 - 39263.wav
-        """;
+  @Test
+  public void testSpaceTalkRetryWithRealDurationFailOnly() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
 
-    runTest("./short-run/short-run.yml", llmAnswers, ttsAnswers, expected, 59263);
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2 && attempt < 3) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+    };
+
+    runTest("./short-run/short-run.yml", testController);
+  }
+
+  @Test
+  public void testShortSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - ((random.nextFloat() * periodDuration / 2f) * (random.nextBoolean() ? -1 : 1)));
+      }
+    };
+
+    runTest("./short-run/short-run.yml", testController);
+  }
+
+  @Test
+  public void testLongSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 2) {
+          return periodDuration + 2100;
+        }
+        return (long) (periodDuration - ((random.nextFloat() * periodDuration / 2f) * (random.nextBoolean() ? -1 : 1)));
+      }
+    };
+
+    runTest("./long-run/long-run.yml", testController);
   }
 
   @Test
   public void testSpaceTalk2() throws IOException {
-    final int fails = 3 * 3;
-    List<String> llmAnswers = new ArrayList<>();
-    for (int i = 0; i < 18 + fails; i++) {
-      llmAnswers.add("LLM answer " + i);
-    }
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
 
-    List<TestTextToSpeechClient.Entry> ttsAnswers = List.of(
-        new TestTextToSpeechClient.Entry(16000, 16000),
-        new TestTextToSpeechClient.Entry(10000, 10000),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(14000, 14000),
-        new TestTextToSpeechClient.Entry(4000, 4000),
-        new TestTextToSpeechClient.Entry(14000, 14000),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(2000, 2000),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(2000, 2000),
-        new TestTextToSpeechClient.Entry(8000, 8000),
-        // 11th
-        new TestTextToSpeechClient.Entry(6000, 6000),
-        new TestTextToSpeechClient.Entry(6000, 6000),
-        new TestTextToSpeechClient.Entry(6000, 6000),
-        new TestTextToSpeechClient.Entry(6000, 6000),
-        // end of 11th
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+    };
+    runTest("./long-run/long-run.yml", testController);
+  }
 
-        new TestTextToSpeechClient.Entry(4000, 4000),
-        new TestTextToSpeechClient.Entry(6000, 6000),
-        new TestTextToSpeechClient.Entry(2000, 2000),
-        new TestTextToSpeechClient.Entry(3000, 3000),
-        new TestTextToSpeechClient.Entry(14000, 14000)
+  @Test
+  public void testSpaceTalk3() throws IOException {
+    Random random = new Random("doggy".hashCode());
+    TestController testController = new TestController() {
+      @Override
+      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        if (periodIndex == 14) {
+          return periodDuration + 2000;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
 
-    );
-
-    String expected = """
-        0 16000 23906 LLM answer 0 ${PROJECT_DIR}\\0 - 0.wav
-        23906 10000 18942 LLM answer 1 ${PROJECT_DIR}\\1 - 23906.wav
-        42848 3000 3000 LLM answer 2 ${PROJECT_DIR}\\2 - 42848.wav
-        45848 14000 18865 LLM answer 3 ${PROJECT_DIR}\\3 - 45848.wav
-        64713 4000 10285 LLM answer 4 ${PROJECT_DIR}\\4 - 64713.wav
-        74998 14000 20234 LLM answer 5 ${PROJECT_DIR}\\5 - 74998.wav
-        95232 3000 3000 LLM answer 6 ${PROJECT_DIR}\\6 - 95232.wav
-        98232 3000 3000 LLM answer 7 ${PROJECT_DIR}\\7 - 98232.wav
-        101232 2000 3900 LLM answer 8 ${PROJECT_DIR}\\8 - 101232.wav
-        103232 3000 11466 LLM answer 9 ${PROJECT_DIR}\\9 - 103232.wav
-        114698 2000 9418 LLM answer 10 ${PROJECT_DIR}\\10 - 114698.wav
-        124116 6000 5550 LLM answer 14 ${PROJECT_DIR}\\11 - 124116.wav
-        129666 6000 10065 LLM answer 15 ${PROJECT_DIR}\\12 - 129666.wav
-        139731 4000 4000 LLM answer 16 ${PROJECT_DIR}\\13 - 139731.wav
-        143731 6000 9151 LLM answer 17 ${PROJECT_DIR}\\14 - 143731.wav
-        152882 2000 2000 LLM answer 18 ${PROJECT_DIR}\\15 - 152882.wav
-        154882 3000 7132 LLM answer 19 ${PROJECT_DIR}\\16 - 154882.wav
-        162014 14000 20000 LLM answer 20 ${PROJECT_DIR}\\17 - 162014.wav
-        """;
-
-    runTest("./long-run/long-run.yml", llmAnswers, ttsAnswers, expected, 183914);
+      @Override
+      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
+        if (periodIndex == 12) {
+          return periodDuration + 1000;
+        }
+        if (periodIndex == 14) {
+          return periodDuration + 2000;
+        }
+        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
+      }
+    };
+    runTest("./long-run/long-run.yml", testController);
   }
 
   private List<Event> getEvents(String eventFilePath) {
@@ -211,21 +342,25 @@ public class SpaceTalkerTest {
   }
 
 
-  private class TestLLMClient extends BaseLLMClient {
-    private final ArrayDeque<String> answers = new ArrayDeque<>();
+  private static class TestLLMClient extends BaseLLMClient {
+    private final ArrayDeque<Entry> answers = new ArrayDeque<>();
 
-    public TestLLMClient(List<String> answers) {
-      this.answers.addAll(answers);
+    public void setAnswer(int periodIndex, long periodDuration) {
+      answers.clear();
+      answers.add(new Entry(periodIndex, periodIndex + " text with approx duration of " + periodDuration + " ms."));
     }
+
+    private record Entry (int periodIndex, String text) { }
 
     @Override
     public Response run(Text instruction) {
       if (answers.isEmpty()) {
         throw new RuntimeException("No more answers");
       }
+      Entry first = answers.removeFirst();
       uncommittedHistory.add(new Message(MessageType.REQUEST, instruction));
-      uncommittedHistory.add(new Message(MessageType.RESPONSE, new Text(answers.getFirst(), "")));
-      return new Response(instruction, answers.removeFirst());
+      uncommittedHistory.add(new Message(MessageType.RESPONSE, new Text(first.text, "")));
+      return new Response(instruction, first.text);
     }
 
     @Override
@@ -234,20 +369,15 @@ public class SpaceTalkerTest {
     }
   };
 
-  private class TestTextToSpeechClient implements TextToSpeechClient {
-    private List<Entry> answers;
+  private static class TestTextToSpeechClient implements TextToSpeechClient {
+    private final List<Entry> answers = new ArrayList<>();
 
-    public void setAnswers(List<Entry> entries) {
-      answers = new ArrayList<>(entries);
+    public void setAnswer(int periodIndex, long periodEvaluatedDuration, long periodDuration) {
+      answers.clear();
+      answers.add(new Entry(periodIndex, periodEvaluatedDuration, periodDuration));
     }
 
-    private record Entry (long nextEstimatedDurationMs, long nextDurationMs) { }
-
-    public void nextAnswer() {
-      answers.removeFirst();
-    }
-
-
+    private record Entry (int periodIndex, long nextEstimatedDurationMs, long nextDurationMs) { }
 
     public TestTextToSpeechClient() throws IOException {
 
@@ -286,10 +416,14 @@ public class SpaceTalkerTest {
 
     @Override
     public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
+      int outputFileIndex = Integer.parseInt(outputFile.getFileName().toString().split(" - ")[0]);
       if (answers.isEmpty()) {
         throw new RuntimeException("No more answers");
       }
       Entry e = answers.getFirst();
+      if (e.periodIndex != outputFileIndex) {
+        throw new RuntimeException("Error, expected: " + outputFileIndex + ", but got " + e.periodIndex);
+      }
       AudioInputStream stream = SilentWav.createSilentStream(e.nextDurationMs);
       AudioSystem.write(stream, AudioFileFormat.Type.WAVE, outputFile.toFile());
       return new TextToSpeechResponse(e.nextDurationMs, UUID.randomUUID().toString());

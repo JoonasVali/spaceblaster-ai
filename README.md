@@ -53,10 +53,10 @@ Note that generally the flow should be:
 
 ### Example runs:
 
-* [Longer game, Narrated by Fin 1](https://www.youtube.com/watch?v=19sxnWyOv_M) 
-* [Longer game, Narrated by Fin 2](https://www.youtube.com/watch?v=aLvp6on_FHs) 
-* [Short run, narrated by Liam](https://www.youtube.com/watch?v=4tj6QLNC0uU) 
-* [Short run, narrated by Mimi](https://www.youtube.com/watch?v=Xq0JhjDl6ps) 
+* [Nature documentary style, Narrated by Fin, GPT-4o](https://www.youtube.com/watch?v=1FCalbWk4WQ) 
+* [Roasting the player, Narrated by Liam, GPT-4o](https://www.youtube.com/watch?v=vnqshh8zPOQ)
+* [Roasting the player, Narrated by Liam, GPT-4o-mini](https://www.youtube.com/watch?v=HhtpKKH9EDA)
+
 
 ### IMPORTANT
 

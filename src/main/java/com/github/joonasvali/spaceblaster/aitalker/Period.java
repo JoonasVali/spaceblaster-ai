@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Period {
@@ -16,7 +17,7 @@ public class Period {
 
   public Period(Event event, List<Event> secondaryEvents, long duration) {
     this.event = event;
-    this.secondaryEvents = secondaryEvents;
+    this.secondaryEvents = new ArrayList<>(secondaryEvents);
     this.duration = duration;
   }
 
@@ -36,10 +37,6 @@ public class Period {
   }
 
   public Long getDuration() {
-    return Math.max(EventDigester.MIN_PERIOD, duration);
-  }
-
-  public Long getPeriodDuration() {
     return duration;
   }
 
@@ -49,5 +46,20 @@ public class Period {
 
   public List<Event> getSecondaryEvents() {
     return secondaryEvents;
+  }
+
+  public Event getLastEventBeforeTimestamp(long timestamp) {
+    return secondaryEvents.stream()
+        .filter(event -> event.getEventTimestamp() < timestamp)
+        .reduce((first, second) -> second)
+        .orElse(event);
+  }
+
+  public List<Event> getAndRemoveSecondaryEventsAfterTimestamp(long timestamp) {
+    List<Event> removedEvents = secondaryEvents.stream()
+        .filter(event -> event.getEventTimestamp() > timestamp)
+        .toList();
+    secondaryEvents.removeIf(event -> event.getEventTimestamp() > timestamp);
+    return removedEvents;
   }
 }
