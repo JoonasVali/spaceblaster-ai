@@ -186,9 +186,9 @@ public class SpaceTalker {
             extraTime
         ));
 
-        this.extraTime = 0L;
-
         notifyExtraPeriodAddedListeners(extraTime, i + 1, copy.eventTimestamp - firstPeriod.getEvent().eventTimestamp);
+
+        this.extraTime = 0L;
       }
     }
 

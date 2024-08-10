@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Period {
@@ -16,7 +17,7 @@ public class Period {
 
   public Period(Event event, List<Event> secondaryEvents, long duration) {
     this.event = event;
-    this.secondaryEvents = secondaryEvents;
+    this.secondaryEvents = new ArrayList<>(secondaryEvents);
     this.duration = duration;
   }
 
