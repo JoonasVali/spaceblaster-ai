@@ -115,10 +115,10 @@ public class SpaceTalker {
 
       if (latency > period.getDuration()) {
         // Next period has already begun, the commentator needs to move on.
-        latency -= period.getDuration();
         commentaryRepository.incrementIndex();
         unaddressedEvents.add(period.getEvent());
-        notifyPeriodIgnoredListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), latency + period.getDuration());
+        notifyPeriodIgnoredListeners(i, period.getEvent().eventTimestamp - periods.getFirst().getEvent().eventTimestamp, period.getDuration(), latency);
+        latency -= period.getDuration();
         continue;
       }
 
