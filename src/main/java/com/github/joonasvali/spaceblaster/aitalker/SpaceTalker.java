@@ -52,6 +52,7 @@ public class SpaceTalker {
   public static final String OUTPUT_SOUND_FILE_NAME = "final";
   public static final long LATENCY_THRESHOLD_MS = 300;
   public static final long MEDIUM_PERIOD_THRESHOLD_MS = 3000;
+  public static final int EXTRA_PERIOD_THRESHOLD_MS = 3000;
   private final SoundDurationEvaluator soundDurationEvaluator;
   private final LLMClient llmClient;
   private final TextToSpeechClient textToSpeechClient;
@@ -435,7 +436,7 @@ public class SpaceTalker {
         }
 
         long extraTime = Math.min(timeUntilNextPeriod, cutoff) - duration;
-        if (context.periodIndex > 0 && context.nextPeriodRelativeStartTime != Long.MAX_VALUE && extraTime > 3000) {
+        if (context.periodIndex > 0 && context.nextPeriodRelativeStartTime != Long.MAX_VALUE && extraTime > EXTRA_PERIOD_THRESHOLD_MS) {
           SpaceTalker.this.extraTime = extraTime;
           cutoff = duration;
         }
