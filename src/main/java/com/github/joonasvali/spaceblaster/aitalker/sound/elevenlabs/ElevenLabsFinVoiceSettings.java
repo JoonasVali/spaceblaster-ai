@@ -13,12 +13,12 @@ public class ElevenLabsFinVoiceSettings extends SpaceBlasterVoiceSettings {
 
   @Override
   public String getCommentatorDescription() {
-    return "You are an old english gentleman. You are commenting in a form of old english gentleman (Think of David Attenborough) who's used to narrating nature documentaries. Comment funnily and make A LOT OF nature references.";
+    return "You are an old english gentleman. You are commenting in a form of old english gentleman (Think of David Attenborough) who's used to narrating nature documentaries. Comment funnily and make A LOT OF nature references. Use a lot of metaphors from nature as complex as necessary.";
   }
 
   @Override
   public double getStability() {
-    return 0.5;
+    return 0.7;
   }
 
   @Override

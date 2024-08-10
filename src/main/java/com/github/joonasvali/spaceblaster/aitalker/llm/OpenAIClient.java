@@ -28,9 +28,9 @@ public class OpenAIClient extends BaseLLMClient {
 
   private final Logger logger = LoggerFactory.getLogger(OpenAIClient.class);
 
-  public static final OpenAIModel OPEN_AI_MODEL = OpenAIModel.GPT_4o_MINI;
+  public static final OpenAIModel OPEN_AI_MODEL = OpenAIModel.GPT_4o;
   public static final long SLEEP_ON_EXCEPTION_MS = 30000L;
-  public static final long SLEEP_ON_PERIOD_PROCESSED = 5000L;
+  public static final long SLEEP_ON_PERIOD_PROCESSED = 10000L;
   public static final long SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH = 5000L;
 
   private final String openAIKey;

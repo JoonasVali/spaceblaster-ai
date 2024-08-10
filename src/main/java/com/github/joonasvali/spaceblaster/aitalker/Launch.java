@@ -11,7 +11,9 @@ import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsClient;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsFinVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamRoastVoiceSettings;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsLiamVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMimiVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsMp3Output;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.SpaceBlasterVoiceSettings;
@@ -37,13 +39,13 @@ public class Launch {
   /**
    * Path to the root directory where the sound files and final output will be saved. Change as needed.
    */
-  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\1";
+  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "\\ Output directory here \\";
 
   /**
    * Path to the event data file. Change as needed.
    */
-  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\1\\events-1718825797443.yml";
-  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamRoastVoiceSettings();
+  public static final String EVENT_DATA_PATH = "\\ Event data file here \\";
+  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsLiamVoiceSettings();
 
   public static void main(String[] args) throws IOException {
     Launch main = new Launch();
@@ -60,6 +62,7 @@ public class Launch {
       Period period = eventDigester.getNextPeriod();
       periods.add(period);
     }
+    logger.info("Preparing " + periods.size() + " periods (can still vary during processing).");
 
     TextToSpeechClient textToSpeechClient = new ElevenLabsClient(VOICE_SETTINGS, new ElevenLabsMp3Output());
 
