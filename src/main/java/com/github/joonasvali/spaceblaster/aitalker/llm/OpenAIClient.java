@@ -1,5 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.llm;
 
+import com.github.joonasvali.spaceblaster.aitalker.Util;
 import com.github.joonasvali.spaceblaster.aitalker.event.AbandonShortenSpeechEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.CommentaryFailedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.ExtraPeriodAddedEvent;
@@ -8,7 +9,6 @@ import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingComplet
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
-import com.github.joonasvali.spaceblaster.aitalker.Util;
 import io.github.stefanbratanov.jvm.openai.ChatClient;
 import io.github.stefanbratanov.jvm.openai.ChatCompletion;
 import io.github.stefanbratanov.jvm.openai.ChatMessage;
@@ -33,16 +33,25 @@ public class OpenAIClient extends BaseLLMClient {
   public static final long SLEEP_ON_PERIOD_PROCESSED = 10000L;
   public static final long SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH = 5000L;
 
-  private final String openAIKey;
+  private final String apiKey;
+  private final String model;
   private int tokensUsed = 0;
   private int completionTokensUsed = 0;
   private int promptTokensUsed = 0;
 
-
   public OpenAIClient() {
-    this.openAIKey = System.getenv("OPENAI_TOKEN");
+    this(false);
   }
 
+  public OpenAIClient(boolean deepSeek) {
+    if (deepSeek) {
+      this.apiKey = System.getenv("DEEPSEEK_API_KEY");
+      this.model = "deepseek-chat";
+    } else {
+      this.apiKey = System.getenv("OPENAI_TOKEN");
+      this.model = OPEN_AI_MODEL.getId();
+    }
+  }
 
   @Override
   public SpaceTalkListener getSpaceTalkListener() {
@@ -87,7 +96,7 @@ public class OpenAIClient extends BaseLLMClient {
   }
 
   public Response run(Text instruction) {
-    OpenAI openAI = OpenAI.newBuilder(openAIKey).build();
+    OpenAI openAI = OpenAI.newBuilder(apiKey).baseUrl("https://api.deepseek.com").build();
 
     ArrayDeque<ChatMessage> previousConversationWithSystemMessage = new ArrayDeque<>();
     previousConversationWithSystemMessage.add(ChatMessage.systemMessage(baseSystemMessage));
@@ -98,7 +107,7 @@ public class OpenAIClient extends BaseLLMClient {
     logger.debug("Running OpenAI with instruction: " + instruction);
     logger.debug("Previous conversation: " + previousConversationWithSystemMessage);
     CreateChatCompletionRequest createChatCompletionRequest = CreateChatCompletionRequest.newBuilder()
-        .model(OPEN_AI_MODEL)
+        .model(model)
         .messages(new ArrayList<>(previousConversationWithSystemMessage))
         .message(inputMessage)
         .temperature(1.1f)
