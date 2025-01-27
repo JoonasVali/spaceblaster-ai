@@ -35,6 +35,7 @@ public class OpenAIClient extends BaseLLMClient {
 
   private final String apiKey;
   private final String model;
+  private final String base;
   private int tokensUsed = 0;
   private int completionTokensUsed = 0;
   private int promptTokensUsed = 0;
@@ -47,9 +48,11 @@ public class OpenAIClient extends BaseLLMClient {
     if (deepSeek) {
       this.apiKey = System.getenv("DEEPSEEK_API_KEY");
       this.model = "deepseek-chat";
+      this.base = "https://api.deepseek.com";
     } else {
       this.apiKey = System.getenv("OPENAI_TOKEN");
       this.model = OPEN_AI_MODEL.getId();
+      this.base = null;
     }
   }
 
@@ -96,7 +99,11 @@ public class OpenAIClient extends BaseLLMClient {
   }
 
   public Response run(Text instruction) {
-    OpenAI openAI = OpenAI.newBuilder(apiKey).baseUrl("https://api.deepseek.com").build();
+    var builder = OpenAI.newBuilder(apiKey);
+    if (base != null) {
+      builder.baseUrl(base);
+    }
+    OpenAI openAI = builder.build();
 
     ArrayDeque<ChatMessage> previousConversationWithSystemMessage = new ArrayDeque<>();
     previousConversationWithSystemMessage.add(ChatMessage.systemMessage(baseSystemMessage));
