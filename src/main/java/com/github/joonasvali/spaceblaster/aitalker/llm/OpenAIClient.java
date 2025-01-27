@@ -26,9 +26,12 @@ import java.util.List;
 
 public class OpenAIClient extends BaseLLMClient {
 
+  public static final String DEEP_SEEK_BASE = "https://api.deepseek.com";
   private final Logger logger = LoggerFactory.getLogger(OpenAIClient.class);
 
   public static final OpenAIModel OPEN_AI_MODEL = OpenAIModel.GPT_4o;
+  public static final String DEEP_SEEK_MODEL = "deepseek-chat";
+
   public static final long SLEEP_ON_EXCEPTION_MS = 30000L;
   public static final long SLEEP_ON_PERIOD_PROCESSED = 10000L;
   public static final long SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH = 5000L;
@@ -46,9 +49,9 @@ public class OpenAIClient extends BaseLLMClient {
 
   public OpenAIClient(boolean deepSeek) {
     if (deepSeek) {
-      this.apiKey = System.getenv("DEEPSEEK_API_KEY");
-      this.model = "deepseek-chat";
-      this.base = "https://api.deepseek.com";
+      this.apiKey = System.getenv("DEEPSEEK_TOKEN");
+      this.model = DEEP_SEEK_MODEL;
+      this.base = DEEP_SEEK_BASE;
     } else {
       this.apiKey = System.getenv("OPENAI_TOKEN");
       this.model = OPEN_AI_MODEL.getId();

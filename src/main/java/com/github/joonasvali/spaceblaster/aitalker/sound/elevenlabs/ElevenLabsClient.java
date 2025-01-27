@@ -63,6 +63,8 @@ public class ElevenLabsClient implements TextToSpeechClient {
 
     String requestId;
 
+    // Keep the text clean from asterisks, as elevenlabs pronounces them out.
+    text = text.replaceAll("\\*", "");
     TextToSpeechFileBuilder builder = SpeechGenerationBuilder.textToSpeech()
         .file()
         .setText(text)
