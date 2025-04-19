@@ -70,30 +70,9 @@ public class ElevenLabsClient implements TextToSpeechClient {
         .setText(text)
         .setGeneratedAudioOutputFormat(generatedAudioOutputFormat)
         .setVoiceId(voiceId)
-        // Unfortunately the serializer fails if voiceSettings passed in directly.
-        .setVoiceSettings(new VoiceSettings() {
-          @Override
-          public double getStability() {
-            return voiceSettings.getStability();
-          }
-
-          @Override
-          public double getSimilarityBoost() {
-            return voiceSettings.getSimilarityBoost();
-          }
-
-          @Override
-          public double getStyle() {
-            return voiceSettings.getStyle();
-          }
-
-          @Override
-          public boolean isUseSpeakerBoost() {
-            return voiceSettings.isUseSpeakerBoost();
-          }
-        })
+        .setVoiceSettings(new VoiceSettings(voiceSettings.getStability(), voiceSettings.getSimilarityBoost(), voiceSettings.getStyle(), voiceSettings.isUseSpeakerBoost()))
         .setModel(ElevenLabsVoiceModel.ELEVEN_MONOLINGUAL_V1)
-        .setLatencyOptimization(StreamLatencyOptimization.NONE);
+        .setLatencyOptimization(StreamLatencyOptimization.NORMAL);
 
     if (previousRequestIds.length > 0) {
       builder.setPreviousRequestIds(previousRequestIds);

@@ -120,7 +120,6 @@ public class OpenAIClient extends BaseLLMClient {
         .model(model)
         .messages(new ArrayList<>(previousConversationWithSystemMessage))
         .message(inputMessage)
-        .temperature(1.1f)
         .n(1)
         .build();
 
