@@ -54,7 +54,7 @@ public class OpenAIClient extends BaseLLMClient {
       this.base = DEEP_SEEK_BASE;
     } else {
       this.apiKey = System.getenv(OPENAI_TOKEN_KEY);
-      this.model = "o3-mini";
+      this.model = "o4-mini";
       this.base = null;
     }
   }
