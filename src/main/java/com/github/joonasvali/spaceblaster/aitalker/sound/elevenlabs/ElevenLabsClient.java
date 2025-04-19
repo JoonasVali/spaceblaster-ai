@@ -71,7 +71,7 @@ public class ElevenLabsClient implements TextToSpeechClient {
         .setGeneratedAudioOutputFormat(generatedAudioOutputFormat)
         .setVoiceId(voiceId)
         .setVoiceSettings(new VoiceSettings(voiceSettings.getStability(), voiceSettings.getSimilarityBoost(), voiceSettings.getStyle(), voiceSettings.isUseSpeakerBoost()))
-        .setModel(ElevenLabsVoiceModel.ELEVEN_MONOLINGUAL_V1)
+        .setModel(ElevenLabsVoiceModel.ELEVEN_MULTILINGUAL_V2)
         .setLatencyOptimization(StreamLatencyOptimization.NORMAL);
 
     if (previousRequestIds.length > 0) {

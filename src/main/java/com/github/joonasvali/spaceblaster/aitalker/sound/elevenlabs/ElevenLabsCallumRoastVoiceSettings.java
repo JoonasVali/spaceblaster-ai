@@ -23,7 +23,7 @@ public class ElevenLabsCallumRoastVoiceSettings extends SpaceBlasterVoiceSetting
 
   @Override
   public double getStability() {
-    return 0.5;
+    return 0.75;
   }
 
   @Override
