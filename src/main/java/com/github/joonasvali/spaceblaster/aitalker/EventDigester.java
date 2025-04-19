@@ -2,12 +2,20 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.event.Event;
 import com.github.joonasvali.spaceblaster.event.EventType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 public class EventDigester {
+  private static final Logger log = LoggerFactory.getLogger(EventDigester.class);
 
   public static final int MAX_PERIOD_MS = 20000;
   // This will not be respected if the next event is a high priority event and happens before this period.
@@ -20,10 +28,12 @@ public class EventDigester {
   private int index = 0;
 
   private boolean introduceCommentaryPeriodAtStart;
+  private final Path screenshotFolder;
 
-  public EventDigester(List<Event> eventList, boolean introduceCommentaryPeriodAtStart) {
+  public EventDigester(List<Event> eventList, Path screenshotFolder, boolean introduceCommentaryPeriodAtStart) {
     this.eventList = eventList;
     this.introduceCommentaryPeriodAtStart = introduceCommentaryPeriodAtStart;
+    this.screenshotFolder = screenshotFolder;
   }
 
   public Period getNextPeriod() {
@@ -53,7 +63,16 @@ public class EventDigester {
       duration += nextEvent.getEventTimestamp() - event.getEventTimestamp();
     }
 
-    return new Period(startEvent, secondaryEvents, duration);
+    Path screenshotPath = screenshotFolder.resolve(event.eventTimestamp + ".png");
+    BufferedImage screenshot = null;
+    if (Files.exists(screenshotPath)) {
+      try {
+        screenshot = ImageIO.read(screenshotPath.toFile());
+      } catch (IOException e) {
+        log.error("Failed to read screenshot: " + screenshotPath, e);
+      }
+    }
+    return new Period(startEvent, secondaryEvents, screenshot, duration);
   }
 
   public boolean hasNextPeriod() {

@@ -2,6 +2,7 @@ package com.github.joonasvali.spaceblaster.aitalker;
 
 import com.github.joonasvali.spaceblaster.event.Event;
 
+import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -14,11 +15,16 @@ public class Period {
   private final List<Event> secondaryEvents;
 
   private final Long duration;
+  private final BufferedImage screenshot;
 
   public Period(Event event, List<Event> secondaryEvents, long duration) {
+    this(event, secondaryEvents, null, duration);
+  }
+  public Period(Event event, List<Event> secondaryEvents, BufferedImage screenshot, long duration) {
     this.event = event;
     this.secondaryEvents = new ArrayList<>(secondaryEvents);
     this.duration = duration;
+    this.screenshot = screenshot;
   }
 
   @Override
@@ -61,5 +67,9 @@ public class Period {
         .toList();
     secondaryEvents.removeIf(event -> event.getEventTimestamp() > timestamp);
     return removedEvents;
+  }
+
+  public BufferedImage getScreenshot() {
+    return screenshot;
   }
 }

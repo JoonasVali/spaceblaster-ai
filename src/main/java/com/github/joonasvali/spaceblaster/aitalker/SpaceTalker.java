@@ -11,6 +11,8 @@ import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
 import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Text;
+import com.github.joonasvali.spaceblaster.aitalker.openai.ImageAnalysis;
+import com.github.joonasvali.spaceblaster.aitalker.openai.ProcessingResult;
 import com.github.joonasvali.spaceblaster.aitalker.sound.AudioTrackBuilder;
 import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
@@ -516,6 +518,16 @@ public class SpaceTalker {
   }
 
   private Text getEventInstructions(long timePassedSeconds, Period period, List<Event> secondaryEventsFromLastPeriod, long latency) {
+    String description = null;
+    if (period.getScreenshot() != null) {
+      ImageAnalysis analysis = new ImageAnalysis("Describe this screenshot from SpaceBlaster game (a space invaders clone). The current game state is important.");
+      try {
+        ProcessingResult<String> imageDescription = analysis.process(period.getScreenshot());
+        description = imageDescription.content();
+      } catch (IOException e) {
+        logger.error("Can not get image description from openAI", e);
+      }
+    }
     String secondaryEvents =
         unaddressedEvents.isEmpty() ?
             (!secondaryEventsFromLastPeriod.isEmpty() ?
@@ -537,9 +549,10 @@ public class SpaceTalker {
           """, secondaryEvents, instruction, period.getEvent().getType());
 
       String shortTerm = String.format("""
+          %s
           Event data follows: %s
           Seconds passed from previous event: %ds
-          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds);
+          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(period.getEvent()), timePassedSeconds);
 
       return new Text(longTerm, shortTerm);
     } else {
@@ -552,9 +565,10 @@ public class SpaceTalker {
           """, secondaryEvents, instruction, period.getEvent().getType(), latencySeconds
       );
       String shortTerm = String.format("""
+          %s
           Event data follows: %s
           Seconds passed from previous event: %ds
-          """, EventSerializer.serialize(period.getEvent()), timePassedSeconds
+          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(period.getEvent()), timePassedSeconds
       );
 
       return new Text(longTerm, shortTerm);
