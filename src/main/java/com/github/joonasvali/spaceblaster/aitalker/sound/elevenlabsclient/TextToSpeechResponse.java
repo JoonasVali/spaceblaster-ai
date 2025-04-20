@@ -97,6 +97,10 @@ public class TextToSpeechResponse {
     this.audioBase64Wav = converted;
   }
 
+  public String getAudioBase64Wav() {
+    return audioBase64Wav;
+  }
+
   public AudioInputStream openAudioStream() {
     try {
       byte[] audioBytesWav = Base64.getDecoder().decode(audioBase64Wav);

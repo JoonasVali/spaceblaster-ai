@@ -41,6 +41,9 @@ public class TextToSpeech {
   }
 
   public OutputFormat getOutputFormat() {
+    if (outputFormat == null) {
+      return OutputFormats.mp3_44100_128;
+    }
     return outputFormat;
   }
 

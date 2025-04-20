@@ -12,9 +12,7 @@ import com.github.joonasvali.spaceblaster.aitalker.llm.BaseLLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Response;
 import com.github.joonasvali.spaceblaster.aitalker.llm.Text;
 import com.github.joonasvali.spaceblaster.aitalker.sound.AudioTrackBuilder;
-import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
-import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechOutput;
 import com.github.joonasvali.spaceblaster.aitalker.sound.audioconversion.SilentWav;
 import com.github.joonasvali.spaceblaster.aitalker.sound.audioconversion.WavDuration;
 import com.github.joonasvali.spaceblaster.event.Event;
@@ -29,7 +27,6 @@ import javax.sound.sampled.AudioSystem;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
@@ -48,7 +45,6 @@ public class SpaceTalkerTest {
   public static Path tempDir;
 
   private interface TestController {
-    long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt);
     long getSoundRealDuration(int periodIndex, long periodDuration, int attempt);
   }
   private void runTest(String eventFilePath, TestController testController) throws IOException {
@@ -68,13 +64,13 @@ public class SpaceTalkerTest {
       @Override
       public void onCommentaryFailed(CommentaryFailedEvent event) {
         llmClient.setAnswer(event.periodIndex(), event.periodDuration());
-        speech.setAnswer(event.periodIndex(), testController.getSoundEvaluatedDuration(event.periodIndex(), event.periodDuration(), event.attempt() + 1), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), event.attempt() + 1));
+        speech.setAnswer(event.periodIndex(), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), event.attempt() + 1));
       }
 
       @Override
       public void onPeriodProcessingStarted(PeriodProcessingStartedEvent event) {
         llmClient.setAnswer(event.periodIndex(), event.periodDuration());
-        speech.setAnswer(event.periodIndex(), testController.getSoundEvaluatedDuration(event.periodIndex(), event.periodDuration(), 0), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), 0));
+        speech.setAnswer(event.periodIndex(), testController.getSoundRealDuration(event.periodIndex(), event.periodDuration(), 0));
       }
 
       @Override
@@ -174,6 +170,7 @@ public class SpaceTalkerTest {
       }
     }
 
+    assert events != null;
     long firstEventTimestamp = events.getFirst().eventTimestamp;
     Assertions.assertEquals(periods.size() - ignoredPeriods.get() + extraPeriodIds.size(), voices.size());
 
@@ -193,34 +190,9 @@ public class SpaceTalkerTest {
   }
 
   @Test
-  public void testSpaceTalkRetryWithEvaluatedDurationFailOnly() throws IOException {
-    Random random = new Random("doggy".hashCode());
-    TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        if (periodIndex == 2 && attempt < 3) {
-          return periodDuration + 2100;
-        }
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
-
-      @Override
-      public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
-    };
-
-    runTest("./short-run/short-run.yml", testController);
-  }
-
-  @Test
   public void testSpaceTalkRetryWithRealDurationFailOnly() throws IOException {
     Random random = new Random("doggy".hashCode());
     TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
 
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
@@ -238,10 +210,6 @@ public class SpaceTalkerTest {
   public void testShortSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
     Random random = new Random("doggy".hashCode());
     TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
 
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
@@ -259,10 +227,6 @@ public class SpaceTalkerTest {
   public void testLongSpaceTalkWithSomeTalkExceedingDuration() throws IOException {
     Random random = new Random("doggy".hashCode());
     TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
 
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
@@ -280,13 +244,6 @@ public class SpaceTalkerTest {
   public void testSpaceTalk2() throws IOException {
     Random random = new Random("doggy".hashCode());
     TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        if (periodIndex == 12) {
-          return periodDuration + 1000;
-        }
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
 
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
@@ -303,16 +260,6 @@ public class SpaceTalkerTest {
   public void testSpaceTalk3() throws IOException {
     Random random = new Random("doggy".hashCode());
     TestController testController = new TestController() {
-      @Override
-      public long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt) {
-        if (periodIndex == 12) {
-          return periodDuration + 1000;
-        }
-        if (periodIndex == 14) {
-          return periodDuration + 2000;
-        }
-        return (long) (periodDuration - (random.nextFloat() * periodDuration / 2f));
-      }
 
       @Override
       public long getSoundRealDuration(int periodIndex, long periodDuration, int attempt) {
@@ -373,12 +320,12 @@ public class SpaceTalkerTest {
   private static class TestTextToSpeechClient implements TextToSpeechClient {
     private final List<Entry> answers = new ArrayList<>();
 
-    public void setAnswer(int periodIndex, long periodEvaluatedDuration, long periodDuration) {
+    public void setAnswer(int periodIndex, long periodDuration) {
       answers.clear();
-      answers.add(new Entry(periodIndex, periodEvaluatedDuration, periodDuration));
+      answers.add(new Entry(periodIndex, periodDuration));
     }
 
-    private record Entry (int periodIndex, long nextEstimatedDurationMs, long nextDurationMs) { }
+    private record Entry (int periodIndex, long nextDurationMs) { }
 
     public TestTextToSpeechClient() throws IOException {
 
@@ -389,31 +336,6 @@ public class SpaceTalkerTest {
       return "You are a test commentator.";
     }
 
-    @Override
-    public TextToSpeechOutput getOutputSettings() {
-      return new TextToSpeechOutput() {
-
-        @Override
-        public int getSampleRate() {
-          return 44100;
-        }
-
-        @Override
-        public int getBitRate() {
-          return 128;
-        }
-
-        @Override
-        public void convertResultingFileToWav(Path input, Path output) throws IOException {
-          Files.copy(input, output);
-        }
-
-        @Override
-        public long getDurationInMs(Path input) throws IOException {
-          return WavDuration.getDuration(input);
-        }
-      };
-    }
 
     @Override
     public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
@@ -431,20 +353,10 @@ public class SpaceTalkerTest {
     }
 
     @Override
-    public SoundDurationEvaluator getSoundDurationEvaluator() {
-      return sound -> {
-        if (answers.isEmpty()) {
-          throw new RuntimeException("No more answers");
-        }
-        Entry e = answers.getFirst();
-        return e.nextEstimatedDurationMs;
-      };
+    public int getSampleRate() {
+      return 44100;
     }
 
-    @Override
-    public SpaceTalkListener getSpaceTalkListener() {
-      return null;
-    }
   }
 }
 
