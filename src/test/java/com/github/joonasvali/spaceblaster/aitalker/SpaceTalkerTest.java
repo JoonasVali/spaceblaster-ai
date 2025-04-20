@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -143,7 +144,7 @@ public class SpaceTalkerTest {
     });
 
 
-    EventDigester eventDigester = new EventDigester(events, true);
+    EventDigester eventDigester = new EventDigester(events, Paths.get(eventFilePath).getParent(), true);
 
     List<Period> periods = new ArrayList<>();
     while (eventDigester.hasNextPeriod()) {

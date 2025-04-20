@@ -54,6 +54,7 @@ Note that generally the flow should be:
 ### Example runs:
 
 * [Nature documentary style, Narrated by Fin, GPT-4o](https://www.youtube.com/watch?v=1FCalbWk4WQ) 
+* [Protoss style, GPT4 o4-mini](https://www.youtube.com/watch?v=CIoZsqphzjA)
 * [Roasting the player, Narrated by Liam, GPT-4o](https://www.youtube.com/watch?v=vnqshh8zPOQ)
 * [Roasting the player, Narrated by Liam, GPT-4o-mini](https://www.youtube.com/watch?v=HhtpKKH9EDA)
 * [Roasting the player (pre-refactor attempt), Narrated by Liam, GPT-4o](https://www.youtube.com/watch?v=vpzZHDi_Y9E)

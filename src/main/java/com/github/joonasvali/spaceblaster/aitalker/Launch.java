@@ -52,7 +52,7 @@ public class Launch {
   private void launch() throws IOException {
     List<Event> events = getEvents();
 
-    EventDigester eventDigester = new EventDigester(events, true);
+    EventDigester eventDigester = new EventDigester(events, Paths.get(EVENT_DATA_PATH).getParent(), true);
 
     List<Period> periods = new ArrayList<>();
     while (eventDigester.hasNextPeriod()) {
