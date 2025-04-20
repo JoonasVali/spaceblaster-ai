@@ -1,10 +1,18 @@
 package com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabsclient;
 
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Base64;
+
 public class TextToSpeechResponse {
   boolean success;
   String requestId;
   int characterCost;
   String audioBase64;
+  String audioBase64Wav;
   char[] characters;
   float[] characterStartTimesSeconds;
   float[] characterEndTimesSeconds;
@@ -82,5 +90,24 @@ public class TextToSpeechResponse {
 
   public String getErrorStatus() {
     return errorStatus;
+  }
+
+
+  public void setAudioBase64Wav(String converted) {
+    this.audioBase64Wav = converted;
+  }
+
+  public AudioInputStream openAudioStream() {
+    try {
+      byte[] audioBytesWav = Base64.getDecoder().decode(audioBase64Wav);
+      ByteArrayInputStream baisWav = new ByteArrayInputStream(audioBytesWav);
+      return AudioSystem.getAudioInputStream(baisWav);
+    } catch (IOException e) {
+      // Should not happen as there's no IO.
+      throw new RuntimeException(e);
+    } catch (UnsupportedAudioFileException e) {
+      // Should not happen as the input is wav.
+      throw new RuntimeException(e);
+    }
   }
 }

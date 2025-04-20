@@ -7,9 +7,14 @@ import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabsclient.voices
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,7 +29,6 @@ public class TextToSpeechTest {
 
   @BeforeEach
   public void setup() throws IOException {
-    // 1) Start MockWebServer
     mockWebServer = new MockWebServer();
     mockWebServer.start();
 
@@ -38,7 +42,7 @@ public class TextToSpeechTest {
   }
 
   @Test
-  public void testTextToSpeechSuccess() throws IOException {
+  public void testTextToSpeechSuccess() throws IOException, LineUnavailableException, InterruptedException {
     Path jsonFile = Path.of("src", "test", "resources", "elevenlabsclient", "text_to_speech_response.1.json");
     String cannedResponse = Files.readString(jsonFile, StandardCharsets.UTF_8);
 
@@ -56,14 +60,21 @@ public class TextToSpeechTest {
 
     TextToSpeechResponse response = tts.textToSpeech(text, new String[0]);
     assertNotNull(response, "Response should not be null");
-//    assertEquals("audio/mpeg", response.getContentType());
-//    assertTrue(response.getAudioBytes().length > 0, "Audio data must be non-empty");
-//
-//    // 7) (Optional) Verify the request that was made
-//    var recorded = mockWebServer.takeRequest();
-//    assertEquals("/v1/text-to-speech/myVoice", recorded.getPath());
-//    assertEquals("POST", recorded.getMethod());
-//    assertTrue(recorded.getBody().readUtf8().contains("\"text\":\"Hello, this is a test.\""));
+
+    AudioInputStream audioInputStream = response.openAudioStream();
+    assertNotNull(audioInputStream, "Audio stream should not be null");
+    Clip clip = AudioSystem.getClip();
+    clip.open(audioInputStream);
+
+    Assertions.assertEquals(1_906_938, clip.getMicrosecondLength());
+    clip.close();
+
+    assertTrue(response.isSuccess(), "Response should be successful");
+    assertEquals("xsGame123", response.getRequestId(), "Request ID should match");
+    assertEquals(321, response.getCharacterCost(), "Character cost should match");
+    assertEquals(text.length(), response.getCharacterStartTimesSeconds().length, "Character start times should be text length");
+    assertEquals(text.length(), response.getCharacterEndTimesSeconds().length, "Character end times should be text length");
+    assertEquals(text.length(), response.getCharacters().length, "Characters should be text length");
   }
 
 

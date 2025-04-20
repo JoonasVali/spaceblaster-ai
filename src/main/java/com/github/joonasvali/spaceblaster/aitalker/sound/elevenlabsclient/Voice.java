@@ -40,4 +40,16 @@ public class Voice {
   public double getStyle() {
     return style;
   }
+
+  @Override
+  public String toString() {
+    return "Voice{" +
+        "name='" + name + '\'' +
+        ", voiceId='" + voiceId + '\'' +
+        ", similiarityBoost=" + similiarityBoost +
+        ", stability=" + stability +
+        ", useSpeakerBoost=" + useSpeakerBoost +
+        ", style=" + style +
+        '}';
+  }
 }

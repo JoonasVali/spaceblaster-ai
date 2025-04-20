@@ -1,5 +1,7 @@
 package com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabsclient;
 
+import com.github.joonasvali.spaceblaster.aitalker.sound.audioconversion.ConvertMp3ToWav;
+import javazoom.jl.decoder.JavaLayerException;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -8,7 +10,14 @@ import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.util.Base64;
 import java.util.Objects;
 
 /**
@@ -125,6 +134,15 @@ public class TextToSpeech {
     response.setCharacterStartTimes(successfulResponseData.alignment.character_start_times_seconds);
     response.setCharacterEndTimes(successfulResponseData.alignment.character_end_times_seconds);
     response.setSuccess(true);
+
+    byte[] audioBytes = Base64.getDecoder().decode(successfulResponseData.audio_base64);
+    ByteArrayInputStream bais = new ByteArrayInputStream(audioBytes);
+    try {
+      String converted = ConvertMp3ToWav.convert(bais);
+      response.setAudioBase64Wav(converted);
+    } catch (JavaLayerException e) {
+      throw new RuntimeException(e);
+    }
     return response;
   }
 
