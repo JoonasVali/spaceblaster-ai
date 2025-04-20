@@ -42,7 +42,7 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
       try (var outputStream = java.nio.file.Files.newOutputStream(outputFile)) {
         outputStream.write(bytes);
       }
-      return new TextToSpeechResponse(WavDuration.getDuration(outputFile), response.getRequestId());
+      return new TextToSpeechResponse(response.getDurationMs(), response.getRequestId());
     } else {
       throw new IOException("Failed to produce audio: " + response.getErrorMessage());
     }

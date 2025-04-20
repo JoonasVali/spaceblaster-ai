@@ -1,5 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabsclient;
 
+import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
@@ -114,4 +115,18 @@ public class TextToSpeechResponse {
       throw new RuntimeException(e);
     }
   }
+
+  public long getDurationMs() {
+    try (AudioInputStream ais = openAudioStream()) {
+      AudioFormat fmt = ais.getFormat();
+      long frames     = ais.getFrameLength();        // total frames in the stream
+      float frameRate = fmt.getFrameRate();          // frames per second
+
+      double durationSec = frames / frameRate;
+      return (long)(durationSec * 1_000);            // ms
+    } catch (Exception e) {
+      throw new RuntimeException("Cannot compute duration", e);
+    }
+  }
+
 }

@@ -67,6 +67,7 @@ public class TextToSpeechTest {
     clip.open(audioInputStream);
 
     Assertions.assertEquals(1_906_938, clip.getMicrosecondLength());
+    Assertions.assertEquals(1906, response.getDurationMs());
     clip.close();
 
     assertTrue(response.isSuccess(), "Response should be successful");
