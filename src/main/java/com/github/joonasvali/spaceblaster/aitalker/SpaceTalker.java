@@ -506,6 +506,11 @@ public class SpaceTalker {
   }
 
   private Text getEventInstructions(long timePassedSeconds, Period period, List<Event> secondaryEventsFromLastPeriod, long latency) {
+    Event mostImportantEvent = getEventWithHighestPriority(period.getEvent(), secondaryEventsFromLastPeriod);
+    if (mostImportantEvent != period.getEvent()) {
+      long timeDiff = period.getEvent().eventTimestamp - mostImportantEvent.eventTimestamp;
+      latency += timeDiff;
+    }
     String description = null;
     if (period.getScreenshot() != null) {
       ImageAnalysis analysis = new ImageAnalysis("Describe this screenshot from SpaceBlaster game (a space invaders clone). The current game state is important.");
@@ -535,13 +540,13 @@ public class SpaceTalker {
 
           %s
           There is an event of type: %s.
-          """, secondaryEvents, instruction, period.getEvent().getType());
+          """, secondaryEvents, instruction, mostImportantEvent.getType());
 
       String shortTerm = String.format("""
           %s
           Event data follows: %s
           Seconds passed from previous event: %ds
-          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(period.getEvent()), timePassedSeconds);
+          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(mostImportantEvent), timePassedSeconds);
 
       return new Text(longTerm, shortTerm);
     } else {
@@ -551,17 +556,31 @@ public class SpaceTalker {
 
           %s
           There was an event of type: %s %d second(s) ago.
-          """, secondaryEvents, instruction, period.getEvent().getType(), latencySeconds
+          """, secondaryEvents, instruction, mostImportantEvent.getType(), latencySeconds
       );
       String shortTerm = String.format("""
           %s
           Event data follows: %s
           Seconds passed from previous event: %ds
-          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(period.getEvent()), timePassedSeconds
+          """, description != null ? "A description of a screenshot follows: " + description : "", EventSerializer.serialize(mostImportantEvent), timePassedSeconds
       );
 
       return new Text(longTerm, shortTerm);
     }
+  }
+
+  private Event getEventWithHighestPriority(Event event, List<Event> secondaryEventsFromLastPeriod) {
+    Event maxPriorityEvent = event;
+    // Using EventPrioritizer.getPriority(event) let's get the priority of the event.
+    int maxPriority = EventPrioritizer.getPriority(event.type);
+    for (Event secondaryEvent : secondaryEventsFromLastPeriod) {
+      int priority = EventPrioritizer.getPriority(secondaryEvent.type);
+      if (priority > maxPriority) {
+        maxPriority = priority;
+        maxPriorityEvent = secondaryEvent;
+      }
+    }
+    return maxPriorityEvent;
   }
 
   private String stringifySecondaryEvents(List<Event> secondaryEventsFromLastPeriod) {

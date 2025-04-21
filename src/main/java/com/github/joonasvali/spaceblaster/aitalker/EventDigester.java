@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -21,12 +23,25 @@ public class EventDigester {
   // This will not be respected if the next event is a high priority event and happens before this period.
   public static final int MIN_PERIOD = 2000;
   public static final int SMALL_PERIOD = 6000;
-  private static final Set<EventType> highPriorityEvents = Set.of(EventType.PLAYER_KILLED, EventType.GAME_OVER, EventType.VICTORY, EventType.ROUND_COMPLETED, EventType.POWERUP_COLLECTED);
-  private static final Set<EventType> lowPriorityEvents = Set.of(EventType.ENEMY_HIT, EventType.ENEMY_KILLED, EventType.PLAYER_NO_LONGER_INVINCIBLE, EventType.ENEMY_FORMATION_CHANGES_MOVEMENT_DIRECTION);
+  private static final Set<EventType> highPriorityEvents;
+  private static final Set<EventType> lowPriorityEvents;
   public static final int END_OF_GAME_DURATION = 20000;
   public static final int START_OF_GAME_EXTRA_DURATION = 20000;
   private final List<Event> eventList;
   private int index = 0;
+
+  static {
+    highPriorityEvents = new HashSet<>();
+    Arrays.stream(EventType.values())
+            .filter(eventType -> EventPrioritizer.getPriority(eventType) <= 4)
+            .forEach(highPriorityEvents::add);
+
+    lowPriorityEvents = new HashSet<>();
+    Arrays.stream(EventType.values())
+            .filter(eventType -> EventPrioritizer.getPriority(eventType) >= 10)
+            .forEach(lowPriorityEvents::add);
+
+  }
 
   private boolean introduceCommentaryPeriodAtStart;
   private final Path screenshotFolder;
