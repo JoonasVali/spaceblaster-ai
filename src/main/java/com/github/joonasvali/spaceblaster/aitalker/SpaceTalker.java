@@ -45,15 +45,11 @@ public class SpaceTalker {
       (Your written commentary will be later synthesized into a voice and spectators will see the game from a video).
       Write all your commentary without quotes, do not use any style indicators or other indicators which would not 
       render well in a voice synthesis.""";
-  public static final String RESOLUTE_SHORTER_MESSAGE_INSTRUCTION = "WRITE MUCH MUCH SHORTER MESSAGE!!!";
 
   public static final String OUTPUT_SOUND_FILE_SUFFIX = ".wav";
-  public static final int SHORTENING_FAILURES_ALLOWED = 3;
-  public static final int SHORTENING_RESOLUTE_THRESHOLD = 2;
   public static final String OUTPUT_SOUND_FILE_NAME = "final";
   public static final long LATENCY_THRESHOLD_MS = 300;
   public static final long MEDIUM_PERIOD_THRESHOLD_MS = 3000;
-  public static final int EXTRA_PERIOD_THRESHOLD_MS = 3000;
   private final LLMClient llmClient;
   private final TextToSpeechClient textToSpeechClient;
   private final AudioTrackBuilder audioTrackBuilder;
@@ -234,51 +230,18 @@ public class SpaceTalker {
 
     String lastOutputMessage = response.outputMessage();
     long eventTimeStamp = period.getEvent().getEventTimestamp();
-    long limitDuration = Math.max(period.getDuration(), EventDigester.MIN_PERIOD);
 
     long speechStartTime = eventTimeStamp + context.latency + context.latencyReduction;
 
-    long audioFileDuration = 0;
-
-    audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, false);
-
-    int failsToShorten = 0;
-    int retries = 0;
-
-    while (failsToShorten < SHORTENING_FAILURES_ALLOWED && !context.isAcceptableDuration(audioFileDuration, limitDuration)) {
-      retries++;
-      notifyCommentaryFailedListeners(lastOutputMessage, failsToShorten, context.periodIndex, eventTimeStamp, period.getDuration(), context.latency + context.latencyReduction);
-      context.addRejectedCommentary(lastOutputMessage, audioFileDuration);
-
-      Response anotherResponse;
-      if (failsToShorten == SHORTENING_RESOLUTE_THRESHOLD) {
-        notifyResoluteShorteningMessage(context.periodIndex, lastOutputMessage, audioFileDuration, limitDuration, failsToShorten);
-        anotherResponse = llmClient.run(new Text(RESOLUTE_SHORTER_MESSAGE_INSTRUCTION, ""));
-      } else {
-        anotherResponse = getShortenedMessage(audioFileDuration, limitDuration);
-      }
-
-      lastOutputMessage = anotherResponse.outputMessage();
-      audioFileDuration = commentaryRepository.addSoundConditionally(context, lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, false);
-
-      if (!context.isAcceptableDuration(audioFileDuration, Math.max(period.getDuration(), EventDigester.MIN_PERIOD))) {
-        failsToShorten++;
-      }
-    }
-
-    if (failsToShorten >= SHORTENING_FAILURES_ALLOWED) {
-      notifyAbandonShortenSpeechListeners(context.periodIndex, lastOutputMessage, failsToShorten);
-      var result = commentaryRepository.addSound(lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, period.getDuration(), false);
-      audioFileDuration = result.soundDurationInTrack;
-    }
+    long audioFileDuration = commentaryRepository.addSound(lastOutputMessage, speechStartTime, context.nextPeriodRelativeStartTime, period.getDuration(), false).soundFileDuration();
 
     return new Commentary(
         lastOutputMessage,
         context.instructions.toString(),
         audioFileDuration,
         commentaryRepository.getLastVoiceStartTime(),
-        retries,
-        failsToShorten >= SHORTENING_FAILURES_ALLOWED
+        0,
+        false
     );
   }
   private void notifyAbandonShortenSpeechListeners(int periodIndex, String output, int attempt) {
@@ -409,41 +372,6 @@ public class SpaceTalker {
       }
     }
 
-    public Long addSoundConditionally(CommentaryContext context, String text, Long speechStartTime, long nextPeriodRelativeStartTime, boolean forceCutoff) throws IOException {
-      long periodDuration = context.period.getDuration();
-      long relativeTimestamp = speechStartTime - startTime;
-      long timeUntilNextPeriod = nextPeriodRelativeStartTime - relativeTimestamp;
-      Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
-      TextToSpeechClient.TextToSpeechResponse response = textToSpeechClient.produce(text, requestIds.toArray(new String[0]), outputFile);
-      long duration = response.durationMs();
-      if (context.isAcceptableDuration(duration, Math.max(periodDuration, EventDigester.MIN_PERIOD))) {
-        long cutoff = forceCutoff ? Math.max(periodDuration, EventDigester.MIN_PERIOD) : Math.max(periodDuration, duration);
-
-        long unallocated = Math.max(0, cutoff - duration);
-        if (unallocated > 0 && cutoff > timeUntilNextPeriod) {
-          // Prevent adding silence, when there is no time for it.
-          cutoff -= Math.min(unallocated, cutoff - timeUntilNextPeriod);
-        }
-
-        long extraTime = Math.min(timeUntilNextPeriod, cutoff) - duration;
-        if (context.periodIndex > 0 && context.nextPeriodRelativeStartTime != Long.MAX_VALUE && extraTime > EXTRA_PERIOD_THRESHOLD_MS) {
-          SpaceTalker.this.extraTime = extraTime;
-          cutoff = duration;
-        }
-
-        audioTrackBuilder.addVoice(text, relativeTimestamp, duration,
-            cutoff,
-            outputFile
-        );
-        requestIds.add(response.requestId());
-        trimRequestIds();
-        index++;
-      } else {
-        Files.delete(outputFile);
-      }
-      return duration;
-    }
-
     public AddSoundResult addSound(String text, Long speechStartTime, long nextPeriodRelativeStartTime, long periodDuration, boolean forceCutoff) throws IOException {
       long relativeTimestamp = speechStartTime - startTime;
       Path outputFile = soundOutputDir.resolve(index + " - " + relativeTimestamp + OUTPUT_SOUND_FILE_SUFFIX);
@@ -471,21 +399,6 @@ public class SpaceTalker {
   }
 
   private record AddSoundResult(Long soundFileDuration, Long soundDurationInTrack) {  }
-
-  private Response getShortenedMessage(long durationMs, long limitDurationMs) {
-    long durationSeconds = msToSeconds(durationMs);
-    long limitDurationSeconds = msToSeconds(limitDurationMs);
-
-    if (limitDurationSeconds != durationSeconds) {
-      return llmClient.run(
-          new Text("Your message was too long. It took " + durationSeconds + "s, but only " + limitDurationSeconds + "s is allowed.", "")
-      );
-    } else {
-      return llmClient.run(
-          new Text("Your message was a bit too long. Shorten it. It needs to fit into " + limitDurationSeconds + " second(s)", "")
-      );
-    }
-  }
 
   private Text getGameIntroductionInstructions(Event firstEvent, String playerName, long durationMs) {
     String longTerm = """

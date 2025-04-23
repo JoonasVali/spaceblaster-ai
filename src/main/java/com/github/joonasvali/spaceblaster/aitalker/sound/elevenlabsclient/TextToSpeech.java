@@ -19,6 +19,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * <a href="https://elevenlabs.io/docs/api-reference/text-to-speech/convert-with-timestamps">API doc</a>
@@ -59,7 +60,12 @@ public class TextToSpeech {
     if (speed < 0.7 || speed > 1.2) {
       throw new IllegalArgumentException("Speed must be between 0.7 and 1.2");
     }
-    OkHttpClient client = new OkHttpClient();
+    OkHttpClient client = new OkHttpClient().newBuilder()
+        .callTimeout(60, TimeUnit.SECONDS)
+        .connectTimeout(60, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(60, TimeUnit.SECONDS)
+        .build();
 
     String json = composeJSONPayload(text, keepLastThree(previousRequestIds), speed);
     MediaType mediaType = MediaType.get("application/json; charset=utf-8");

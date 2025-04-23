@@ -15,7 +15,6 @@ import io.github.stefanbratanov.jvm.openai.ChatMessage;
 import io.github.stefanbratanov.jvm.openai.CreateChatCompletionRequest;
 import io.github.stefanbratanov.jvm.openai.OpenAI;
 import io.github.stefanbratanov.jvm.openai.OpenAIException;
-import io.github.stefanbratanov.jvm.openai.OpenAIModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

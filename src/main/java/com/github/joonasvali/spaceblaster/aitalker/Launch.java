@@ -8,8 +8,11 @@ import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingComplet
 import com.github.joonasvali.spaceblaster.aitalker.event.PeriodProcessingStartedEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.ResoluteShorteningMessageEvent;
 import com.github.joonasvali.spaceblaster.aitalker.event.SpaceTalkListener;
+import com.github.joonasvali.spaceblaster.aitalker.llm.LLMClient;
 import com.github.joonasvali.spaceblaster.aitalker.llm.OpenAIClient;
+import com.github.joonasvali.spaceblaster.aitalker.llm.StatelessOpenAIClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.TextToSpeechClient;
+import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsCallumRoastVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsTextToSpeechClient;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.ElevenLabsFinVoiceSettings;
 import com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs.SpaceBlasterVoiceSettings;
@@ -35,13 +38,13 @@ public class Launch {
   /**
    * Path to the root directory where the sound files and final output will be saved. Change as needed.
    */
-  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "\\ Output directory here \\";
+  private static final String SOUND_OUTPUT_DIRECTORY_ROOT = "K:\\spaceblaster-projects\\4";
 
   /**
    * Path to the event data file. Change as needed.
    */
-  public static final String EVENT_DATA_PATH = "\\ Event data file here \\";
-  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsFinVoiceSettings("Fin");
+  public static final String EVENT_DATA_PATH = "K:\\spaceblaster-projects\\4\\events-1745066816003.yml";
+  public static final SpaceBlasterVoiceSettings VOICE_SETTINGS = new ElevenLabsCallumRoastVoiceSettings("Callum");
 
   public static void main(String[] args) throws IOException {
     Launch main = new Launch();
@@ -64,8 +67,8 @@ public class Launch {
 
     Path dir = Paths.get(SOUND_OUTPUT_DIRECTORY_ROOT);
     Files.createDirectories(dir);
-    OpenAIClient openAIClient = new OpenAIClient();
-    SpaceTalker spaceTalker = new SpaceTalker(textToSpeechClient, openAIClient, dir);
+    StatelessOpenAIClient openAIClient = new StatelessOpenAIClient();
+    SpaceTalker2 spaceTalker = new SpaceTalker2(textToSpeechClient, openAIClient, dir, Paths.get(EVENT_DATA_PATH).getParent());
     spaceTalker.addListener(new SpaceTalkListener() {
 
       @Override
@@ -126,7 +129,7 @@ public class Launch {
       }
     });
 
-    spaceTalker.run(periods, "Player one", System.currentTimeMillis() + "-PlayerOne");
+    spaceTalker.run(events, "Player one", System.currentTimeMillis() + "-PlayerOne");
 
     logger.info("Tokens used: " + openAIClient.getTokensUsed());
     logger.info("Completion tokens used: " + openAIClient.getCompletionTokensUsed());
