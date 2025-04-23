@@ -3,8 +3,8 @@ package com.github.joonasvali.spaceblaster.aitalker.sound.elevenlabs;
 import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 
 public class ElevenLabsFinVoiceSettings extends SpaceBlasterVoiceSettings {
-  public String getVoiceId() {
-    return "D38z5RcWu1voky8WS1ja";
+  public ElevenLabsFinVoiceSettings(String name) {
+    super(name, "D38z5RcWu1voky8WS1ja", 0.7, 0.7, 0, true);
   }
 
   public SoundDurationEvaluator getSoundDurationEvaluator() {
@@ -14,25 +14,5 @@ public class ElevenLabsFinVoiceSettings extends SpaceBlasterVoiceSettings {
   @Override
   public String getCommentatorDescription() {
     return "You are an old english gentleman. You are commenting in a form of old english gentleman (Think of David Attenborough) who's used to narrating nature documentaries. Comment funnily and make A LOT OF nature references. Use a lot of metaphors from nature as complex as necessary.";
-  }
-
-  @Override
-  public double getStability() {
-    return 0.7;
-  }
-
-  @Override
-  public double getSimilarityBoost() {
-    return 0.9;
-  }
-
-  @Override
-  public double getStyle() {
-    return 0;
-  }
-
-  @Override
-  public boolean isUseSpeakerBoost() {
-    return true;
   }
 }

@@ -8,4 +8,5 @@ public record CommentaryFailedEvent(
     int periodIndex,
     long periodRelativeStartTime,
     long eventTime
-) {}
+) {
+}

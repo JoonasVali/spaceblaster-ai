@@ -35,6 +35,7 @@ public class ImageAnalysis {
   public static final String COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions";
 
   private final String prompt;
+
   public ImageAnalysis(String prompt) {
     this.prompt = prompt;
   }
@@ -52,7 +53,6 @@ public class ImageAnalysis {
   }
 
 
-
   public ProcessingResult<String> process(BufferedImage bufferedImage) throws IOException {
 
     ImageResizer imageResizer = ImageResizer.getStandardOpenAIImageResizer();
@@ -62,13 +62,13 @@ public class ImageAnalysis {
 
     if (logger.isDebugEnabled()) {
       Path tempPath = System.getProperty("java.io.tmpdir") != null ? Path.of(System.getProperty("java.io.tmpdir")) : Path.of(".");
-      Path file = tempPath.resolve("image-" + base64Image.hashCode()  + ".png");
+      Path file = tempPath.resolve("image-" + base64Image.hashCode() + ".png");
       logger.debug("Writing image to " + file);
       ImageIO.write(resizedImage, "png", file.toFile());
     }
 
     JSONObject jsonBody = createJsonPayload(base64Image, 1);
-    String result =  sendRequestToOpenAI(jsonBody);
+    String result = sendRequestToOpenAI(jsonBody);
 
     if (result.startsWith("Error")) {
       throw new RuntimeException(result);

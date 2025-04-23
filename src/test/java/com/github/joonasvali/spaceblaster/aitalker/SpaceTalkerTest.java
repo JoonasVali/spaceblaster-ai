@@ -49,8 +49,10 @@ public class SpaceTalkerTest {
 
   private interface TestController {
     long getSoundEvaluatedDuration(int periodIndex, long periodDuration, int attempt);
+
     long getSoundRealDuration(int periodIndex, long periodDuration, int attempt);
   }
+
   private void runTest(String eventFilePath, TestController testController) throws IOException {
     List<Event> events = getEvents(eventFilePath);
 
@@ -59,7 +61,7 @@ public class SpaceTalkerTest {
 
     SpaceTalker spaceTalker = new SpaceTalker(speech, llmClient, tempDir);
     AtomicInteger ignoredPeriods = new AtomicInteger(0);
-    AtomicBoolean lastPeriodEndedWithSilence =  new AtomicBoolean(false);
+    AtomicBoolean lastPeriodEndedWithSilence = new AtomicBoolean(false);
     AtomicLong lastAudioTimestampPointer = new AtomicLong(0);
     Set<Integer> extraPeriodIds = new HashSet<>();
 
@@ -102,7 +104,7 @@ public class SpaceTalkerTest {
         System.out.println(
             event.periodIndex() + ": period " + event.periodRelativeStartTime() + " -> " +
                 (event.periodRelativeStartTime() + event.periodDuration()) + " completed " +
-                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)"): "") +
+                (event.retryAttempts() > 0 ? ("(in " + event.retryAttempts() + " attempts)") : "") +
                 " Audio: " + event.generatedAudioDurationMs() + "ms, playtime: " + event.generatedAudioRelativeStartTime() + " -> " + (event.generatedAudioRelativeStartTime() + event.generatedAudioDurationMs()) + ". " +
                 (event.inputLatency() > 0 ? event.inputLatency() + "ms latency. " : "") +
                 silence +
@@ -351,7 +353,8 @@ public class SpaceTalkerTest {
       answers.add(new Entry(periodIndex, periodIndex + " text with approx duration of " + periodDuration + " ms."));
     }
 
-    private record Entry (int periodIndex, String text) { }
+    private record Entry(int periodIndex, String text) {
+    }
 
     @Override
     public Response run(Text instruction) {
@@ -368,7 +371,9 @@ public class SpaceTalkerTest {
     public SpaceTalkListener getSpaceTalkListener() {
       return null;
     }
-  };
+  }
+
+  ;
 
   private static class TestTextToSpeechClient implements TextToSpeechClient {
     private final List<Entry> answers = new ArrayList<>();
@@ -378,7 +383,8 @@ public class SpaceTalkerTest {
       answers.add(new Entry(periodIndex, periodEvaluatedDuration, periodDuration));
     }
 
-    private record Entry (int periodIndex, long nextEstimatedDurationMs, long nextDurationMs) { }
+    private record Entry(int periodIndex, long nextEstimatedDurationMs, long nextDurationMs) {
+    }
 
     public TestTextToSpeechClient() throws IOException {
 
@@ -387,32 +393,6 @@ public class SpaceTalkerTest {
     @Override
     public String getCommentatorDescription() {
       return "You are a test commentator.";
-    }
-
-    @Override
-    public TextToSpeechOutput getOutputSettings() {
-      return new TextToSpeechOutput() {
-
-        @Override
-        public int getSampleRate() {
-          return 44100;
-        }
-
-        @Override
-        public int getBitRate() {
-          return 128;
-        }
-
-        @Override
-        public void convertResultingFileToWav(Path input, Path output) throws IOException {
-          Files.copy(input, output);
-        }
-
-        @Override
-        public long getDurationInMs(Path input) throws IOException {
-          return WavDuration.getDuration(input);
-        }
-      };
     }
 
     @Override
@@ -431,6 +411,11 @@ public class SpaceTalkerTest {
     }
 
     @Override
+    public int getSampleRate() {
+      return 44100;
+    }
+
+    @Override
     public SoundDurationEvaluator getSoundDurationEvaluator() {
       return sound -> {
         if (answers.isEmpty()) {
@@ -439,11 +424,6 @@ public class SpaceTalkerTest {
         Entry e = answers.getFirst();
         return e.nextEstimatedDurationMs;
       };
-    }
-
-    @Override
-    public SpaceTalkListener getSpaceTalkListener() {
-      return null;
     }
   }
 }

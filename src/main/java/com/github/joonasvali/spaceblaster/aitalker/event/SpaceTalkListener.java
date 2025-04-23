@@ -4,6 +4,7 @@ public interface SpaceTalkListener {
   void onCommentaryFailed(CommentaryFailedEvent event);
 
   void onPeriodProcessingStarted(PeriodProcessingStartedEvent event);
+
   void onPeriodProcessingCompleted(PeriodProcessingCompletedEvent event);
 
   void onResoluteShorteningMessage(ResoluteShorteningMessageEvent event);

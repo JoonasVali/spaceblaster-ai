@@ -41,7 +41,7 @@ public class SpaceTalker {
       then the player is invincible for a short period and their weapon is defaulted back to cannon.
       Space Blaster episode consists of multiple levels, you are commenting on a single episode. The gameplay is continuous, 
       once the player completes a level, the next level starts soon as enemies are born, without a pause in the game.
-
+      
       In a context of this game, you are commenting based on the events from the game to the spectators. 
       (Your written commentary will be later synthesized into a voice and spectators will see the game from a video).
       Write all your commentary without quotes, do not use any style indicators or other indicators which would not 
@@ -70,10 +70,7 @@ public class SpaceTalker {
     this.llmClient = llmClient;
     this.soundDurationEvaluator = textToSpeechClient.getSoundDurationEvaluator();
     this.textToSpeechClient = textToSpeechClient;
-    this.audioTrackBuilder = new AudioTrackBuilder(textToSpeechClient.getOutputSettings().getSampleRate(), true);
-    if (textToSpeechClient.getSpaceTalkListener() != null) {
-      this.listeners.add(textToSpeechClient.getSpaceTalkListener());
-    }
+    this.audioTrackBuilder = new AudioTrackBuilder(textToSpeechClient.getSampleRate(), true);
     if (llmClient.getSpaceTalkListener() != null) {
       this.listeners.add(llmClient.getSpaceTalkListener());
     }
@@ -293,6 +290,7 @@ public class SpaceTalker {
         failsToShorten >= SHORTENING_FAILURES_ALLOWED
     );
   }
+
   private void notifyAbandonShortenSpeechListeners(int periodIndex, String output, int attempt) {
     long time = System.currentTimeMillis();
     listeners.forEach((s) -> {
@@ -482,7 +480,8 @@ public class SpaceTalker {
     }
   }
 
-  private record AddSoundResult(Long soundFileDuration, Long soundDurationInTrack) {  }
+  private record AddSoundResult(Long soundFileDuration, Long soundDurationInTrack) {
+  }
 
   private Response getShortenedMessage(long durationMs, long limitDurationMs) {
     long durationSeconds = msToSeconds(durationMs);
@@ -532,8 +531,8 @@ public class SpaceTalker {
     String secondaryEvents =
         unaddressedEvents.isEmpty() ?
             (!secondaryEventsFromLastPeriod.isEmpty() ?
-          "While you were commenting there happened some minor events: " + stringifySecondaryEvents(secondaryEventsFromLastPeriod) + "\n\n" :
-          "") : "While you were commenting there happened some events: " + stringifySecondaryEvents(new ArrayList<>(unaddressedEvents)) + "\n\n";
+                "While you were commenting there happened some minor events: " + stringifySecondaryEvents(secondaryEventsFromLastPeriod) + "\n\n" :
+                "") : "While you were commenting there happened some events: " + stringifySecondaryEvents(new ArrayList<>(unaddressedEvents)) + "\n\n";
 
     String instruction = !secondaryEventsFromLastPeriod.isEmpty() ?
         String.format("You have %d second window to comment on the following event and/or on the minor events above.", msToSeconds(Math.max(period.getDuration(), EventDigester.MIN_PERIOD))) :
@@ -544,7 +543,7 @@ public class SpaceTalker {
     if (latencySeconds == 0) {
       String longTerm = String.format("""
           %s
-
+          
           %s
           There is an event of type: %s.
           """, secondaryEvents, instruction, period.getEvent().getType());
@@ -560,7 +559,7 @@ public class SpaceTalker {
 
       String longTerm = String.format("""
           %s
-
+          
           %s
           There was an event of type: %s %d second(s) ago.
           """, secondaryEvents, instruction, period.getEvent().getType(), latencySeconds
@@ -592,6 +591,7 @@ public class SpaceTalker {
     }
     return sb.toString();
   }
+
   public record SpaceTalk(Path soundFile, List<AudioTrackBuilder.TimedVoice> voices) {
   }
 
@@ -608,6 +608,7 @@ public class SpaceTalker {
     private final int periodIndex;
 
     private final List<RejectedCommentary> rejectedCommentaries = new ArrayList<>();
+
     private boolean isAcceptableDuration(long duration, long limitDuration) {
       if (latency == 0) {
         // Allow to go a bit over the limit.

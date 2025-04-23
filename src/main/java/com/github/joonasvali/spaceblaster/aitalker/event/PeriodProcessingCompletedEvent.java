@@ -13,4 +13,5 @@ public record PeriodProcessingCompletedEvent(
     long silenceDuration,
     boolean shorteningAbandoned,
     long eventTime
-) {}
+) {
+}

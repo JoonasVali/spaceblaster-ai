@@ -32,7 +32,7 @@ public abstract class BaseLLMClient implements LLMClient {
   }
 
 
-  public record Message (MessageType type, Text message) {
+  public record Message(MessageType type, Text message) {
   }
 
   public enum MessageType {

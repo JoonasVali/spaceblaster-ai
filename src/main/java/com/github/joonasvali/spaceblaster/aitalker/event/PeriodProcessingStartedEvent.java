@@ -6,4 +6,5 @@ public record PeriodProcessingStartedEvent(
     int periodIndex,
     long periodRelativeStartTime,
     long eventTime
-) {}
+) {
+}

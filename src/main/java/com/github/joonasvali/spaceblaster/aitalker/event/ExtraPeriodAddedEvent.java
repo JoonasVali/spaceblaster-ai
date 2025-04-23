@@ -5,4 +5,5 @@ public record ExtraPeriodAddedEvent(
     int periodIndex,
     long periodRelativeStartTime,
     long eventTime
-) {}
+) {
+}

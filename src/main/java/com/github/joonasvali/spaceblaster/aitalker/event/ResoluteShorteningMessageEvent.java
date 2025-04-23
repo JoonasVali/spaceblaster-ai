@@ -1,6 +1,6 @@
 package com.github.joonasvali.spaceblaster.aitalker.event;
 
-public record ResoluteShorteningMessageEvent (
+public record ResoluteShorteningMessageEvent(
     int periodIndex,
     String result,
     long duration,

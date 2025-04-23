@@ -20,6 +20,7 @@ public class Period {
   public Period(Event event, List<Event> secondaryEvents, long duration) {
     this(event, secondaryEvents, null, duration);
   }
+
   public Period(Event event, List<Event> secondaryEvents, BufferedImage screenshot, long duration) {
     this.event = event;
     this.secondaryEvents = new ArrayList<>(secondaryEvents);
