@@ -36,7 +36,7 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
    */
   @Override
   public TextToSpeechResponse produce(String text, String[] previousRequestIds, Path outputFile) throws IOException {
-    var response = textToSpeech.textToSpeech(text, previousRequestIds);
+    var response = textToSpeech.textToSpeech(text, previousRequestIds, getSpeedModifier());
     if (response.isSuccess()) {
       byte[] bytes = Base64.getDecoder().decode(response.getAudioBase64Wav());
       try (var outputStream = java.nio.file.Files.newOutputStream(outputFile)) {
@@ -48,6 +48,10 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
     }
   }
 
+  public float getSpeedModifier() {
+    return 1.2f;
+  }
+
   @Override
   public int getSampleRate() {
     return textToSpeech.getOutputFormat().getSampleRate();
@@ -55,7 +59,7 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
 
   @Override
   public SoundDurationEvaluator getSoundDurationEvaluator() {
-    return voiceSettings.getSoundDurationEvaluator();
+    return new SoundDurationEvaluatorSpeedModifier(voiceSettings.getSoundDurationEvaluator(), getSpeedModifier());
   }
 
 }
