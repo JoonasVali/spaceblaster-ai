@@ -447,6 +447,12 @@ public class SpaceTalker {
         );
         requestIds.add(response.requestId());
         trimRequestIds();
+
+        if (context.periodIndex > 0 && extraTime > 500 && extraTime < EXTRA_PERIOD_THRESHOLD_MS) {
+          // Extra time is not enough to add a new period, but it is enough to add silence.
+          // Make sure the voice is "reset".
+          requestIds.clear();
+        }
         index++;
       } else {
         Files.delete(outputFile);
