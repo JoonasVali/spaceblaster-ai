@@ -49,7 +49,7 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
   }
 
   public float getSpeedModifier() {
-    return 1.2f;
+    return 1.1999f;
   }
 
   @Override
