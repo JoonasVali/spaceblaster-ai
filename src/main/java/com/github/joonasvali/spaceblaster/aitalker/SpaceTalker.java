@@ -35,17 +35,18 @@ public class SpaceTalker {
   public static final String SYSTEM_MESSAGE = """
       Space Blaster is a modern space invaders clone where player controls a spaceship and shoots enemies.
       The game has multiple levels and the player can collect power-ups, which randomly gives the player a new weapon.
-      Player sometimes does not want a power-up, because it might be worse than their current weapon.
-      The initial weapon the player has is always a cannon. The enemies are similar, but they have different weapons. 
+      Player sometimes does not want a power-up, because it might be worse than their current weapon. Gauss gun is one
+      of the most powerful weapons in the game.
+      The initial weapon the player has is always a cannon. The enemies are similar, but they have different weapons.
       They also need to be hit with a different amount of damage to be destroyed. If player dies, 
       then the player is invincible for a short period and their weapon is defaulted back to cannon.
       Space Blaster episode consists of multiple levels, you are commenting on a single episode. The gameplay is continuous, 
       once the player completes a level, the next level starts soon as enemies are born, without a pause in the game.
       
-      In a context of this game, you are commenting based on the events from the game to the spectators. 
-      (Your written commentary will be later synthesized into a voice and spectators will see the game from a video).
+      In a context of this game, you are commenting based on the events from the game to the spectators.      
       Write all your commentary without quotes, do not use any style indicators or other indicators which would not 
-      render well in a voice synthesis.""";
+      render well in a voice synthesis. Do not use abbreviations. If you mention seconds, milliseconds or points, then
+      write them out fully as words.""";
   public static final String RESOLUTE_SHORTER_MESSAGE_INSTRUCTION = "WRITE MUCH MUCH SHORTER MESSAGE!!!";
 
   public static final String OUTPUT_SOUND_FILE_SUFFIX = ".wav";
