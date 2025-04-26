@@ -15,7 +15,6 @@ import io.github.stefanbratanov.jvm.openai.ChatMessage;
 import io.github.stefanbratanov.jvm.openai.CreateChatCompletionRequest;
 import io.github.stefanbratanov.jvm.openai.OpenAI;
 import io.github.stefanbratanov.jvm.openai.OpenAIException;
-import io.github.stefanbratanov.jvm.openai.OpenAIModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +31,9 @@ public class OpenAIClient extends BaseLLMClient {
 
   public static final String DEEP_SEEK_MODEL = "deepseek-chat";
 
-  public static final long SLEEP_ON_EXCEPTION_MS = 30000L;
-  public static final long SLEEP_ON_PERIOD_PROCESSED = 10000L;
-  public static final long SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH = 5000L;
+  public static final long SLEEP_ON_EXCEPTION_MS = 15000L;
+  public static final long SLEEP_ON_PERIOD_PROCESSED = 5000L;
+  public static final long SLEEP_ON_FAILURE_TO_SHORTEN_SPEECH = 3000L;
 
   private final String apiKey;
   private final String model;

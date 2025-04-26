@@ -18,4 +18,9 @@ public class ElevenLabsLiamVoiceSettings extends SpaceBlasterVoiceSettings {
         You are commenting in a form of a professional sports commentator. You are super energetic and enthusiastic. You are a great fit for sports commentary, motivational speeches, and other high-energy content.
         """;
   }
+
+  @Override
+  public String getModelId() {
+    return "eleven_multilingual_v2";
+  }
 }

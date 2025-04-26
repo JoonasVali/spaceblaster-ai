@@ -56,7 +56,7 @@ public class TextToSpeechTest {
 
     String text = "Hello, this is a test.";
     Callum voice = new Callum("myVoice");
-    TextToSpeech tts = client.createTextToSpeech(voice);
+    TextToSpeech tts = client.createTextToSpeech("eleven_multilingual_v2", voice);
 
     TextToSpeechResponse response = tts.textToSpeech(text, new String[0]);
     assertNotNull(response, "Response should not be null");
@@ -92,7 +92,7 @@ public class TextToSpeechTest {
 
     String text = "Hello, this is a test.";
     Callum voice = new Callum("myVoice");
-    TextToSpeech tts = client.createTextToSpeech(voice);
+    TextToSpeech tts = client.createTextToSpeech("eleven_multilingual_v2", voice);
 
     TextToSpeechResponse response = tts.textToSpeech(text, new String[0]);
 
@@ -121,7 +121,7 @@ public class TextToSpeechTest {
 
     String text = "Hello, this is a test.";
     Callum voice = new Callum("myVoice");
-    TextToSpeech tts = client.createTextToSpeech(voice);
+    TextToSpeech tts = client.createTextToSpeech("eleven_multilingual_v2", voice);
 
     TextToSpeechResponse response = tts.textToSpeech(text, new String[0]);
 

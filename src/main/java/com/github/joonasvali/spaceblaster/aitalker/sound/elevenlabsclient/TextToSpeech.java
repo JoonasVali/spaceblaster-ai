@@ -10,11 +10,6 @@ import okhttp3.Response;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import javax.sound.sampled.AudioInputStream;
-import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.Clip;
-import javax.sound.sampled.LineUnavailableException;
-import javax.sound.sampled.UnsupportedAudioFileException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Base64;
@@ -28,10 +23,12 @@ public class TextToSpeech {
   private final String apiKey;
   private OutputFormat outputFormat;
   private String baseURL;
+  private String modelId;
 
-  public TextToSpeech(String baseURL, String apiKey, Voice voice) {
+  public TextToSpeech(String baseURL, String apiKey, String modelId, Voice voice) {
     this.voice = voice;
     this.apiKey = apiKey;
+    this.modelId = modelId;
 
     String strippedBaseURL = baseURL;
     if (strippedBaseURL.endsWith("/")) {
@@ -175,7 +172,7 @@ public class TextToSpeech {
       object.put("previous_request_ids", previousRequestIds);
     }
     object.put("voice_settings", voiceSettings);
-    object.put("model_id", "eleven_multilingual_v2");
+    object.put("model_id", modelId);
     return object.toString();
   }
 

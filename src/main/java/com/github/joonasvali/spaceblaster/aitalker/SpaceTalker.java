@@ -530,7 +530,6 @@ public class SpaceTalker {
       try {
         ProcessingResult<String> imageDescription = analysis.process(period.getScreenshot());
         description = imageDescription.content();
-        System.out.println("DEBUG IMAGE DESC: " + imageDescription.content());
       } catch (IOException e) {
         logger.error("Can not get image description from openAI", e);
       }

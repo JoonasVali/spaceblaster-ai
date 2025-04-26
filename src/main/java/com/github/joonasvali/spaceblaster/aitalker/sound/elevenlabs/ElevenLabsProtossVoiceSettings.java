@@ -19,4 +19,9 @@ public class ElevenLabsProtossVoiceSettings extends SpaceBlasterVoiceSettings {
         "\n" +
         "Even in jest, your tone remains grave—as if laughter itself were a fleeting shadow lost in the twilight of a dying world. Speak not as a human, but as one who walks the void between worlds, ever alone, ever watching.";
   }
+
+  @Override
+  public String getModelId() {
+    return "eleven_multilingual_v2";
+  }
 }

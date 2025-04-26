@@ -20,7 +20,7 @@ public class ElevenLabsTextToSpeechClient implements TextToSpeechClient {
   public ElevenLabsTextToSpeechClient(SpaceBlasterVoiceSettings voiceSettings) {
     this.voiceSettings = voiceSettings;
     this.elevenLabsClient = new ElevenLabsClient();
-    textToSpeech = elevenLabsClient.createTextToSpeech(voiceSettings);
+    textToSpeech = elevenLabsClient.createTextToSpeech(voiceSettings.getModelId(), voiceSettings);
   }
 
 

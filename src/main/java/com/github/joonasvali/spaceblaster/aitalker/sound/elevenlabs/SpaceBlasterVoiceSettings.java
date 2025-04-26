@@ -11,4 +11,6 @@ public abstract class SpaceBlasterVoiceSettings extends Voice {
   public abstract SoundDurationEvaluator getSoundDurationEvaluator();
 
   public abstract String getCommentatorDescription();
+
+  public abstract String getModelId();
 }

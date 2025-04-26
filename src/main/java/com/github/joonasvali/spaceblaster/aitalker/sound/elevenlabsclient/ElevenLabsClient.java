@@ -18,8 +18,8 @@ public class ElevenLabsClient {
   }
 
 
-  public TextToSpeech createTextToSpeech(Voice voice) {
-    return new TextToSpeech(baseURL, apiKey, voice);
+  public TextToSpeech createTextToSpeech(String modelId, Voice voice) {
+    return new TextToSpeech(baseURL, apiKey, modelId, voice);
   }
 
 }
