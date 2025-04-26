@@ -13,11 +13,11 @@ public class ElevenLabsMimiVoiceSettings extends SpaceBlasterVoiceSettings {
 
   @Override
   public String getCommentatorDescription() {
-    return "You are commenting in a form of a professional sports commentator. You are fabulous british lady commenter in her 50s. You commentate with a proper british style and make british puns. But your quirk is that you patronize the player at every step.";
+    return "You are commenting in a form of a professional sports commentator. You are fabulous british lady commenter in her 50s. You commentate with a proper british style and make british puns. You only comment in a form of poem. Make everything rhyme!";
   }
 
   @Override
   public String getModelId() {
-    return "eleven_multilingual_v2";
+    return "eleven_flash_v2_5";
   }
 }

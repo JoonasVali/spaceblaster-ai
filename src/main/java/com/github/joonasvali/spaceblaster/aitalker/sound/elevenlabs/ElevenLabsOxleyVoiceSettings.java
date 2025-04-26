@@ -4,7 +4,7 @@ import com.github.joonasvali.spaceblaster.aitalker.sound.SoundDurationEvaluator;
 
 
 public class ElevenLabsOxleyVoiceSettings extends SpaceBlasterVoiceSettings {
-  private String name;
+  private final String name;
   public ElevenLabsOxleyVoiceSettings(String name) {
     super(name, "3SF4rB1fGBMXU9xRM7pz", 0.58, 0.42, 0, true);
     this.name = name;
