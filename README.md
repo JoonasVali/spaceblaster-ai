@@ -55,6 +55,7 @@ Note that generally the flow should be:
 #### 26/04/2025
 
 * [Roasting the player, Narrated by Callum, GPT-4.1](https://www.youtube.com/watch?v=18e0Bs50DAY)
+* [Creep, Narrated by Oxley, GPT-4.1](https://www.youtube.com/watch?v=WlSBQazI-wo)
 
 #### Older versions:
 
