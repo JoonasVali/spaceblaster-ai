@@ -58,6 +58,8 @@ Note that generally the flow should be:
 * [Creep, Narrated by Oxley, GPT-4.1](https://www.youtube.com/watch?v=WlSBQazI-wo)
 * [Creep (2), Narrated by Oxley, GPT-4.1](https://www.youtube.com/watch?v=jBc8UjZTQk0)
 * [Poetry, Narrated by Mimi, GPT-4.1](https://www.youtube.com/watch?v=71bvTZyV67g)
+* [High school jock (Matt), Narrated by Aahmed, GPT-4.1](https://www.youtube.com/watch?v=3NetoQqXQIs)
+* [Adorably clueless, Narrated by Blondie, GPT-4.1, speed 1.0f](https://www.youtube.com/watch?v=XIn76ObkY7E)
 
 #### Older versions:
 
