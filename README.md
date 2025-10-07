@@ -1,3 +1,5 @@
+Note that this project is [no longer maintained](https://github.com/JoonasVali/spaceblaster-ai/issues/4).
+
 # SpaceBlaster AI Narrator
 
 This is an AI narrator for the SpaceBlaster game. It uses a large language model to generate text based on the game state.
